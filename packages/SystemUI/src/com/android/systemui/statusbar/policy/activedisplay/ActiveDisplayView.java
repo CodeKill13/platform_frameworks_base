@@ -83,7 +83,7 @@ import android.util.Log;
 import java.util.Calendar;
 
 public class ActiveDisplayView extends FrameLayout {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final String TAG = "ActiveDisplayView";
 
     // the following is used for testing purposes
@@ -100,6 +100,8 @@ public class ActiveDisplayView extends FrameLayout {
 
     private static final long DISPLAY_TIMEOUT = 8000L;
 
+    private static final int HIDE_NOTIFICATIONS_BELOW_SCORE = Notification.PRIORITY_LOW;
+
     // Targets
     private static final int UNLOCK_TARGET = 0;
     private static final int OPEN_APP_TARGET = 4;
@@ -110,6 +112,8 @@ public class ActiveDisplayView extends FrameLayout {
     private static final int MSG_HIDE_NOTIFICATION_VIEW = 1001;
     private static final int MSG_SHOW_NOTIFICATION      = 1002;
     private static final int MSG_DISMISS_NOTIFICATION   = 1003;
+
+    private static final long NAP_TIME = 100;
 
     private BaseStatusBar mBar;
     private boolean mAttached = false;
@@ -138,11 +142,13 @@ public class ActiveDisplayView extends FrameLayout {
     private LinearLayout.LayoutParams mOverflowLayoutParams;
     private KeyguardManager mKeyguardManager;
     private KeyguardLock mKeyguardLock;
+    private float value = 8.0f;
 
     // user customizable settings
     private boolean mDisplayNotifications = false;
     private boolean mDisplayNotificationText = false;
     private boolean mShowAllNotifications = false;
+    private boolean mHideLowPriorityNotifications = false;
     private boolean mPocketModeEnabled = false;
     private long mRedisplayTimeout = 0;
     private float mInitialBrightness = 1f;
@@ -280,6 +286,8 @@ public class ActiveDisplayView extends FrameLayout {
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACTIVE_DISPLAY_ALL_NOTIFICATIONS), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.ACTIVE_DISPLAY_HIDE_LOW_PRIORITY_NOTIFICATIONS), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACTIVE_DISPLAY_POCKET_MODE), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACTIVE_DISPLAY_REDISPLAY), false, this);
@@ -318,6 +326,8 @@ public class ActiveDisplayView extends FrameLayout {
                         resolver, Settings.System.ACTIVE_DISPLAY_TEXT, 0) == 1;
                 mShowAllNotifications = Settings.System.getInt(
                         resolver, Settings.System.ACTIVE_DISPLAY_ALL_NOTIFICATIONS, 0) == 1;
+                mHideLowPriorityNotifications = Settings.System.getInt(
+                    resolver, Settings.System.ACTIVE_DISPLAY_HIDE_LOW_PRIORITY_NOTIFICATIONS, 0) == 1;
                 mPocketModeEnabled = Settings.System.getInt(
                         resolver, Settings.System.ACTIVE_DISPLAY_POCKET_MODE, 0) == 1;
                 mRedisplayTimeout = Settings.System.getLong(
@@ -395,7 +405,7 @@ public class ActiveDisplayView extends FrameLayout {
 
         mKeyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
 
-        mSettingsObserver = new SettingsObserver(new Handler());
+        mSettingsObserver = new SettingsObserver(mHandler);
         mCreationOrientation = Resources.getSystem().getConfiguration().orientation;
     }
 
@@ -612,7 +622,7 @@ public class ActiveDisplayView extends FrameLayout {
     }
 
     private void handleShowNotification(boolean ping) {
-        if (!mDisplayNotifications) return;
+        if (!mDisplayNotifications || inQuietHours()) return;
         showNotificationView();
         setActiveNotification(mNotification, true);
         inflateRemoteView(mNotification);
@@ -752,16 +762,16 @@ public class ActiveDisplayView extends FrameLayout {
     }
 
     private void registerSensorListener() {
-        if (mProximitySensor == null)
-        {
+        if (mProximitySensor == null) {
+            logd("Registering sensor");
             mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-            mSensorManager.registerListener(mSensorListener, mProximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
+            mSensorManager.registerListener(mSensorListener, mProximitySensor, 2000000);
         }
     }
 
     private void unregisterSensorListener() {
-        if (mProximitySensor != null)
-        {
+        if (mProximitySensor != null) {
+            logd("Unegistering sensor");
             mSensorManager.unregisterListener(mSensorListener, mProximitySensor);
             mProximitySensor = null;
         }
@@ -876,6 +886,31 @@ public class ActiveDisplayView extends FrameLayout {
     };
 
     /**
+     * Check if device is in Quiet Hours in the moment.
+     */
+    private boolean inQuietHours() {
+        boolean quietHoursEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.QUIET_HOURS_ENABLED, 0, UserHandle.USER_CURRENT_OR_SELF) != 0;
+        int quietHoursStart = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.QUIET_HOURS_START, 0, UserHandle.USER_CURRENT_OR_SELF);
+        int quietHoursEnd = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.QUIET_HOURS_END, 0, UserHandle.USER_CURRENT_OR_SELF);
+        boolean quietHoursDim = Settings.System.getIntForUser(mContext.getContentResolver(),
+                    Settings.System.QUIET_HOURS_DIM, 0, UserHandle.USER_CURRENT_OR_SELF) != 0;
+
+        if (quietHoursEnabled && quietHoursDim && (quietHoursStart != quietHoursEnd)) {
+            Calendar calendar = Calendar.getInstance();
+            int minutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE);
+            if (quietHoursEnd < quietHoursStart) {
+                return (minutes > quietHoursStart) || (minutes < quietHoursEnd);
+            } else {
+                return (minutes > quietHoursStart) && (minutes < quietHoursEnd);
+            }
+        }
+        return false;
+    } 
+
+    /**
      * Swaps the current StatusBarNotification with {@code sbn}
      * @param sbn The StatusBarNotification to swap with the current
      */
@@ -890,7 +925,8 @@ public class ActiveDisplayView extends FrameLayout {
      * @return True if it should be used, false otherwise.
      */
     private boolean isValidNotification(StatusBarNotification sbn) {
-        return (sbn.getNotification().icon != 0 && (sbn.isClearable() || mShowAllNotifications));
+        return (sbn.getNotification().icon != 0 && (sbn.isClearable() || mShowAllNotifications)
+         && !(mHideLowPriorityNotifications && sbn.getNotification().priority < HIDE_NOTIFICATIONS_BELOW_SCORE));
     }
 
     /**
@@ -1020,12 +1056,15 @@ public class ActiveDisplayView extends FrameLayout {
     private SensorEventListener mSensorListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            float value = event.values[0];
-            if (event.sensor.equals(mProximitySensor)) {
-                //only fire when initially removed from pocket
-                if (!mProximityIsFar && value >= mProximitySensor.getMaximumRange() / 2.0) {
+            float newvalue = event.values[0];
+            logd("new:"+newvalue+" old:"+value);
+            if (Math.abs(newvalue-value)>0.1) {
+                value = newvalue;
+                //only fire when initially removed from pocket                
+                logd("Got a proximity reading!\nvalue:"+value+"\nthresh:"+(mProximitySensor.getMaximumRange()));
+                if (value >= mProximitySensor.getMaximumRange()) {
                     mProximityIsFar = true;
-                    if (!isScreenOn() && mPocketModeEnabled && !isOnCall() && !isCallIncoming()) {
+                    if (!isScreenOn() && mPocketModeEnabled && !isOnCall() && !isCallIncoming() && !inQuietHours()) {
                         logd("Waking because just removed from pocket");
                         mNotification = getNextAvailableNotification();
                         if (mNotification != null) showNotification(mNotification, true);

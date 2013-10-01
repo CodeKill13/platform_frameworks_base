@@ -55,21 +55,21 @@ public class KeyButtonView extends ImageView {
     final float GLOW_MAX_SCALE_FACTOR = 1.8f;
     static float BUTTON_QUIESCENT_ALPHA = 0.70f;
 
-    long mDownTime;
-    int mCode;
-    int mTouchSlop;
-    Drawable mGlowBG;
-    static int mGlowBGColor = Integer.MIN_VALUE;
-    int mGlowWidth, mGlowHeight;
-    static int mDurationSpeedOn = 500;
-    static int mDurationSpeedOff = 50;
-    float mCustomGlowScale = GLOW_MAX_SCALE_FACTOR;
-    float mGlowAlpha = 0f, mGlowScale = 1f, mDrawingAlpha = 1f;
-    boolean mSupportsLongpress = true;
+    private long mDownTime;
+    private int mCode;
+    private int mTouchSlop;
+    private Drawable mGlowBG;
+    private static int mGlowBGColor = Integer.MIN_VALUE;
+    private int mGlowWidth, mGlowHeight;
+    private static int mDurationSpeedOn = 500;
+    private static int mDurationSpeedOff = 50;
+    private float mCustomGlowScale = GLOW_MAX_SCALE_FACTOR;
+    private float mGlowAlpha = 0f, mGlowScale = 1f, mDrawingAlpha = 1f;
+    private boolean mSupportsLongpress = true;
     private boolean mShouldTintIcon = true;
     protected boolean mHandlingLongpress = false;
-    RectF mRect = new RectF(0f,0f,0f,0f);
-    AnimatorSet mPressedAnim;
+    private RectF mRect = new RectF(0f,0f,0f,0f);
+    private AnimatorSet mPressedAnim;
     private Context mmContext;
 
     private boolean mAttached = false;
@@ -110,28 +110,21 @@ public class KeyButtonView extends ImageView {
 
         mmContext = context;
 
-        TypedArray a = null;
-
         mShouldTintIcon = colorable;
 
-        try {
-            a = context.obtainStyledAttributes(attrs, R.styleable.KeyButtonView,
+        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.KeyButtonView,
                 defStyle, 0);
 
-            mCode = a.getInteger(R.styleable.KeyButtonView_keyCode, 0);
+        mCode = a.getInteger(R.styleable.KeyButtonView_keyCode, 0);
+        mSupportsLongpress = a.getBoolean(R.styleable.KeyButtonView_keyRepeat, true);
 
-            mSupportsLongpress = a.getBoolean(R.styleable.KeyButtonView_keyRepeat, true);
-
-            mGlowBG = a.getDrawable(R.styleable.KeyButtonView_glowBackground);
-            if (mGlowBG != null) {
-                setDrawingAlpha(BUTTON_QUIESCENT_ALPHA);
-                mGlowWidth = mGlowBG.getIntrinsicWidth();
-                mGlowHeight = mGlowBG.getIntrinsicHeight();
-            }
-        } finally {
-            if (a != null)
-                a.recycle();
+        mGlowBG = a.getDrawable(R.styleable.KeyButtonView_glowBackground);
+        if (mGlowBG != null) {
+            setDrawingAlpha(BUTTON_QUIESCENT_ALPHA);
+            mGlowWidth = mGlowBG.getIntrinsicWidth();
+            mGlowHeight = mGlowBG.getIntrinsicHeight();
         }
+        a.recycle();
 
         setClickable(true);
         mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
