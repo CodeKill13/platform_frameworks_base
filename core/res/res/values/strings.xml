@@ -300,6 +300,9 @@
     <!-- Spoken description for ringer normal option. [CHAR LIMIT=NONE] -->
     <string name="silent_mode_ring">Ringer on</string>
 
+  <string name="reboot_hot">Hot Reboot</string>
+    <string name="hot_reboot_progress">Restarting android framework\u2026</string>
+    <string name="hot_reboot_title" product="default">Hot reboot phone</string>
     <!-- Shutdown Progress Dialog. This is shown if the user chooses to power off the phone. -->
     <string name="shutdown_progress">Shutting down\u2026</string>
 

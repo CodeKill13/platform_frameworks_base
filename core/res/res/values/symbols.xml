@@ -1919,7 +1919,14 @@
 
   <!-- Wifi -->
   <java-symbol type="bool" name="config_wifiApStartInterface" />
-
+ <java-symbol type="array" name="shutdown_reboot_actions" />
+ <java-symbol type="string" name="global_action_reboot" />
+ <java-symbol type="string" name="hot_reboot_progress" />
+ <java-symbol type="string" name="hot_reboot_title" />
+ <java-symbol type="string" name="reboot_hot" />
+ <java-symbol type="string" name="reboot_progress" />
+  
+  
   <!-- Hide Navbar -->
   <java-symbol type="layout" name="global_actions_navbar_mode" />
   <java-symbol type="id" name="navbartoggle" />
