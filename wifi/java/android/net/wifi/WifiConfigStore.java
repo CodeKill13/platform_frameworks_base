@@ -992,7 +992,6 @@ class WifiConfigStore {
                 loge("failed to set BSSID: "+config.BSSID);
                 break setVariables;
             }
-
             if (config.isIBSS) {
                 if(!mWifiNative.setNetworkVariable(
                         netId,
@@ -1009,6 +1008,7 @@ class WifiConfigStore {
                     break setVariables;
                 }
             }
+
 
             String allowedKeyManagementString =
                 makeString(config.allowedKeyManagement, WifiConfiguration.KeyMgmt.strings);

@@ -49,6 +49,7 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.StrictMode;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.text.Selection;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -57,7 +58,7 @@ import android.util.AttributeSet;
 import android.util.EventLog;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.TypedValue;
+import android.util.TypedValue;  
 import android.util.Slog;
 import android.util.SparseArray;
 import android.view.ActionMode;
@@ -65,7 +66,7 @@ import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.ContextThemeWrapper;
 import android.view.Display;
-import android.view.Gravity;
+import android.view.Gravity; 
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -1477,9 +1478,9 @@ public class Activity extends ContextThemeWrapper
         if (mWindow != null) {
             // Pass the configuration changed event to the window
             mWindow.onConfigurationChanged(newConfig);
-            if (mWindow.mIsFloatingWindow) {
+	if (mWindow.mIsFloatingWindow) {
                 scaleFloatingWindow(null);
-            }
+            }   
         }
 
         if (mActionBar != null) {
@@ -5099,17 +5100,17 @@ public class Activity extends ContextThemeWrapper
         attachBaseContext(context);
 
         mFragments.attachActivity(this, mContainer, null);
-
+        
         boolean floating = (intent.getFlags()&Intent.FLAG_FLOATING_WINDOW) == Intent.FLAG_FLOATING_WINDOW;
+	boolean mWeWantPopups = (Settings.System.getInt(getContentResolver(), Settings.System.WE_WANT_POPUPS, 1) == 1);
         boolean history = (intent.getFlags()&Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY;
-        if (intent != null && floating && !history) {
+        if ((intent != null) && floating && mWeWantPopups) {
             TypedArray styleArray = context.obtainStyledAttributes(info.theme, com.android.internal.R.styleable.Window);
             TypedValue backgroundValue = styleArray.peekValue(com.android.internal.R.styleable.Window_windowBackground);
 
             // Apps that have no title don't need no title bar
             TypedValue outValue = new TypedValue();
             boolean result = styleArray.getValue(com.android.internal.R.styleable.Window_windowNoTitle, outValue);
-            styleArray.recycle();
 
             if (backgroundValue != null && backgroundValue.toString().contains("light")) {
                 context.getTheme().applyStyle(com.android.internal.R.style.Theme_DeviceDefault_FloatingWindowLight, true);
@@ -5138,7 +5139,7 @@ public class Activity extends ContextThemeWrapper
             scaleFloatingWindow(context);
         } else {
             mWindow = PolicyManager.makeNewWindow(this);
-        }
+        } 
 
         mWindow.setCallback(this);
         mWindow.getLayoutInflater().setPrivateFactory(this);
@@ -5192,7 +5193,7 @@ public class Activity extends ContextThemeWrapper
         } else {
             mWindow.setLayout((int)(metrics.widthPixels * 0.7f), (int)(metrics.heightPixels * 0.8f));
         }
-    }
+    } 
 
     /** @hide */
     public final IBinder getActivityToken() {

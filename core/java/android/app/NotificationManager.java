@@ -69,7 +69,7 @@ import android.util.Log;
 public class NotificationManager
 {
     private static String TAG = "NotificationManager";
-    private static boolean localLOGV = false;
+    private static boolean localLOGV = true;
 
     private static INotificationManager sService;
 
@@ -125,16 +125,20 @@ public class NotificationManager
         int[] idOut = new int[1];
         INotificationManager service = getService();
         String pkg = mContext.getPackageName();
+        String basepkg = mContext.getBasePackageName();
+        int myId = UserHandle.myUserId();
         if (notification.sound != null) {
             notification.sound = notification.sound.getCanonicalUri();
             if (StrictMode.vmFileUriExposureEnabled()) {
                 notification.sound.checkFileUriExposed("Notification.sound");
             }
         }
-        if (localLOGV) Log.v(TAG, pkg + ": notify(" + id + ", " + notification + ")");
+        if (localLOGV) Log.v(TAG, pkg + ": "+ basepkg+ ": "+ myId +": notify(" + id + ", " + notification + ")");
         try {
-            service.enqueueNotificationWithTag(pkg, mContext.getBasePackageName(), tag, id,
-                    notification, idOut, UserHandle.myUserId());
+	    if (service != null) {
+                service.enqueueNotificationWithTag(pkg, basepkg, tag, id,
+                    notification, idOut, myId);
+            }
             if (id != idOut[0]) {
                 Log.w(TAG, "notify: id corrupted: sent " + id + ", got back " + idOut[0]);
             }

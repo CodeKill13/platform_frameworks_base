@@ -123,7 +123,6 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
     private HandlerThread mThread;
     private final BluetoothHandler mHandler;
     private int mErrorRecoveryRetryCounter;
-    private boolean mIsBluetoothServiceConnected = false;
 
     private void registerForAirplaneMode(IntentFilter filter) {
         final ContentResolver resolver = mContext.getContentResolver();
@@ -329,9 +328,6 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
     }
 
     public void registerStateChangeCallback(IBluetoothStateChangeCallback callback) {
-        if (callback == null) {
-            return;
-        }
         mContext.enforceCallingOrSelfPermission(BLUETOOTH_PERM,
                                                 "Need BLUETOOTH permission");
         Message msg = mHandler.obtainMessage(MESSAGE_REGISTER_STATE_CHANGE_CALLBACK);
@@ -340,9 +336,6 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
     }
 
     public void unregisterStateChangeCallback(IBluetoothStateChangeCallback callback) {
-        if (callback == null) {
-            return;
-        }
         mContext.enforceCallingOrSelfPermission(BLUETOOTH_PERM,
                                                 "Need BLUETOOTH permission");
         Message msg = mHandler.obtainMessage(MESSAGE_UNREGISTER_STATE_CHANGE_CALLBACK);
@@ -432,12 +425,6 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
             (!checkIfCallerIsForegroundUser())) {
             Log.w(TAG,"disable(): not allowed for non-active and non system user");
             return false;
-        }
-
-        if (!mIsBluetoothServiceConnected || mState != BluetoothAdapter.STATE_ON)
-        {
-            Log.d(TAG, "Disable(): Service is not Connected Or Bluetooth is not enabled");
-            return true;
         }
 
         if (DBG) {
@@ -790,15 +777,12 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
                 case MESSAGE_UNREGISTER_STATE_CHANGE_CALLBACK:
                 {
                     IBluetoothStateChangeCallback callback = (IBluetoothStateChangeCallback) msg.obj;
-                    if(callback != null)
-                       mStateChangeCallbacks.unregister(callback);
+                    mStateChangeCallbacks.unregister(callback);
                     break;
                 }
                 case MESSAGE_BLUETOOTH_SERVICE_CONNECTED:
                 {
                     if (DBG) Log.d(TAG,"MESSAGE_BLUETOOTH_SERVICE_CONNECTED: " + msg.arg1);
-
-                    mIsBluetoothServiceConnected = true;
 
                     IBinder service = (IBinder) msg.obj;
                     synchronized(mConnection) {
@@ -888,9 +872,6 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
                 case MESSAGE_BLUETOOTH_SERVICE_DISCONNECTED:
                 {
                     Log.e(TAG, "MESSAGE_BLUETOOTH_SERVICE_DISCONNECTED: " + msg.arg1);
-
-                    mIsBluetoothServiceConnected = false;
-
                     synchronized(mConnection) {
                         if (msg.arg1 == SERVICE_IBLUETOOTH) {
                             // if service is unbinded already, do nothing and return
@@ -906,8 +887,7 @@ class BluetoothManagerService extends IBluetoothManager.Stub {
                     }
 
                     if (mEnable) {
-                        if (!isBluetoothPersistedStateOn())
-                            mEnable = false;
+                        mEnable = false;
                         // Send a Bluetooth Restart message
                         Message restartMsg = mHandler.obtainMessage(
                             MESSAGE_RESTART_BLUETOOTH_SERVICE);

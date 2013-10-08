@@ -37,6 +37,7 @@ import com.android.internal.app.IMediaContainerService;
 import com.android.internal.app.ResolverActivity;
 import com.android.internal.content.NativeLibraryHelper;
 import com.android.internal.content.PackageHelper;
+import com.android.internal.policy.impl.PhoneWindowManager;
 import com.android.internal.util.FastXmlSerializer;
 import com.android.internal.util.XmlUtils;
 import com.android.server.DeviceStorageMonitorService;
@@ -49,7 +50,6 @@ import org.xmlpull.v1.XmlSerializer;
 
 import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
-import android.app.AppOpsManager;
 import android.app.IActivityManager;
 import android.app.admin.IDevicePolicyManager;
 import android.app.backup.IBackupManager;
@@ -127,6 +127,7 @@ import android.util.SparseArray;
 import android.util.Xml;
 import android.view.Display;
 import android.view.WindowManager;
+import android.view.WindowManagerPolicy;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -182,8 +183,6 @@ public class PackageManagerService extends IPackageManager.Stub {
     static final boolean DEBUG_PREFERRED = false;
     static final boolean DEBUG_UPGRADE = false;
     private static final boolean DEBUG_INSTALL = false;
-    private static final boolean DEBUG_POLICY = true;
-    private static final boolean DEBUG_POLICY_INSTALL = DEBUG_POLICY || false;
     private static final boolean DEBUG_REMOVE = false;
     private static final boolean DEBUG_BROADCASTS = false;
     private static final boolean DEBUG_SHOW_INFO = false;
@@ -431,7 +430,6 @@ public class PackageManagerService extends IPackageManager.Stub {
     final ResolveInfo mResolveInfo = new ResolveInfo();
     ComponentName mResolveComponentName;
     PackageParser.Package mPlatformPackage;
-    private AppOpsManager mAppOps;
 
     IAssetRedirectionManager mAssetRedirectionManager;
 
@@ -531,6 +529,9 @@ public class PackageManagerService extends IPackageManager.Stub {
 
     // Stores a list of users whose package restrictions file needs to be updated
     private HashSet<Integer> mDirtyUsers = new HashSet<Integer>();
+    
+    WindowManager mWindowManager;
+    private final WindowManagerPolicy mPolicy; // to set packageName
 
     final private DefaultContainerConnection mDefContainerConn =
             new DefaultContainerConnection();
@@ -866,18 +867,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                                 deleteOld = true;
                             }
 
-                            if (!update && !isSystemApp(res.pkg.applicationInfo)) {
-                                boolean privacyGuard = Secure.getIntForUser(
-                                        mContext.getContentResolver(),
-                                        android.provider.Settings.Secure.PRIVACY_GUARD_DEFAULT,
-                                        0, UserHandle.USER_CURRENT) == 1;
-                                if (privacyGuard) {
-                                    mAppOps.setPrivacyGuardSettingForPackage(
-                                            res.pkg.applicationInfo.uid,
-                                            res.pkg.applicationInfo.packageName, true);
-                                }
-                            }
-
                             // Log current value of "unknown sources" setting
                             EventLog.writeEvent(EventLogTags.UNKNOWN_SOURCES_ENABLED,
                                 getUnknownSourcesSettings());
@@ -1093,7 +1082,6 @@ public class PackageManagerService extends IPackageManager.Stub {
         mSettings.addSharedUserLPw("android.uid.bluetooth", BLUETOOTH_UID, ApplicationInfo.FLAG_SYSTEM);
         mSettings.addSharedUserLPw("android.uid.shell", SHELL_UID, ApplicationInfo.FLAG_SYSTEM);
 
-        mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
         String separateProcesses = SystemProperties.get("debug.separate_processes");
         if (separateProcesses != null && separateProcesses.length() > 0) {
             if ("*".equals(separateProcesses)) {
@@ -1113,8 +1101,9 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         mInstaller = installer;
 
-        WindowManager wm = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
-        Display d = wm.getDefaultDisplay();
+        mWindowManager = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
+        Display d = mWindowManager.getDefaultDisplay();
+        mPolicy = new PhoneWindowManager();
         d.getMetrics(mMetrics);
 
         synchronized (mInstallLock) {
@@ -1676,9 +1665,9 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
             permReader.close();
         } catch (XmlPullParserException e) {
-            Slog.w(TAG, "Got execption parsing permissions in "+permFile.getPath()+".", e);
+            Slog.w(TAG, "Got execption parsing permissions.", e);
         } catch (IOException e) {
-            Slog.w(TAG, "Got execption parsing permissions in "+permFile.getPath()+".", e);
+            Slog.w(TAG, "Got execption parsing permissions.", e);
         }
     }
 
@@ -3122,6 +3111,20 @@ public class PackageManagerService extends IPackageManager.Stub {
         list.add(pi);
     }
 
+    public List<PackageInfo> getInstalledThemePackages() {
+        // Returns a list of theme APKs.
+        ArrayList<PackageInfo> finalList = new ArrayList<PackageInfo>();
+        List<PackageInfo> installedPackagesList = mContext.getPackageManager().getInstalledPackages(0);
+        Iterator<PackageInfo> i = installedPackagesList.iterator();
+        while (i.hasNext()) {
+            final PackageInfo pi = i.next();
+            if (pi != null && pi.isThemeApk) {
+                finalList.add(pi);
+            }
+        }
+        return finalList;
+    }
+
     @Override
     public ParceledListSlice<PackageInfo> getPackagesHoldingPermissions(
             String[] permissions, int flags, int userId) {
@@ -3564,13 +3567,10 @@ public class PackageManagerService extends IPackageManager.Stub {
         }
 
         // The apk is forward locked (not public) if its code and resources
-        // are kept in different files. (except for app in either system or
-        // vendor path).
+        // are kept in different files.
         // TODO grab this value from PackageSettings
-        if ((parseFlags & PackageParser.PARSE_IS_SYSTEM_DIR) == 0) {
-            if (ps != null && !ps.codePath.equals(ps.resourcePath)) {
-                parseFlags |= PackageParser.PARSE_FORWARD_LOCK;
-            }
+        if (ps != null && !ps.codePath.equals(ps.resourcePath)) {
+            parseFlags |= PackageParser.PARSE_FORWARD_LOCK;
         }
 
         String codePath = null;
@@ -3676,9 +3676,18 @@ public class PackageManagerService extends IPackageManager.Stub {
         if (pkgs != null) {
             int i = 0;
             for (PackageParser.Package pkg : pkgs) {
+                PackageParser.Package p = pkg;
                 if (!isFirstBoot()) {
                     i++;
                     try {
+                        // give the packagename to the PhoneWindowManager
+                        ApplicationInfo ai;
+                        try {
+                            ai = mContext.getPackageManager().getApplicationInfo(p.packageName, 0);
+                        } catch (Exception e) {
+                            ai = null;
+                        }
+                        mPolicy.setPackageName((String) (ai != null ? mContext.getPackageManager().getApplicationLabel(ai) : p.packageName));
                         ActivityManagerNative.getDefault().showBootMessage(
                                 mContext.getResources().getString(
                                         com.android.internal.R.string.android_upgrading_apk,
@@ -3686,7 +3695,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                     } catch (RemoteException e) {
                     }
                 }
-                PackageParser.Package p = pkg;
                 synchronized (mInstallLock) {
                     if (!p.mDidDexOpt) {
                         performDexOptLI(p, false, false, true);
@@ -3848,7 +3856,7 @@ public class PackageManagerService extends IPackageManager.Stub {
         for (int user : users) {
             if (user != 0) {
                 res = mInstaller.createUserData(packageName,
-                        UserHandle.getUid(user, uid), user, seinfo);
+                        UserHandle.getUid(user, uid), user);
                 if (res < 0) {
                     return res;
                 }
@@ -4046,20 +4054,6 @@ public class PackageManagerService extends IPackageManager.Stub {
             return null;
         }
 
-        if (!pkg.applicationInfo.sourceDir.startsWith(Environment.getRootDirectory().getPath()) &&
-                !pkg.applicationInfo.sourceDir.startsWith("/vendor")) {
-            Object obj = mSettings.getUserIdLPr(1000);
-            Signature[] s1 = null;
-            if (obj instanceof SharedUserSetting) {
-                s1 = ((SharedUserSetting)obj).signatures.mSignatures;
-            }
-            if ((compareSignatures(pkg.mSignatures, s1) == PackageManager.SIGNATURE_MATCH)) {
-                Slog.w(TAG, "Cannot install platform packages to user storage");
-                mLastScanError = PackageManager.INSTALL_FAILED_INVALID_INSTALL_LOCATION;
-                return null;
-            }
-        }
-
         // Initialize package source and resource directories
         File destCodeFile = new File(pkg.applicationInfo.sourceDir);
         File destResourceFile = new File(pkg.applicationInfo.publicSourceDir);
@@ -4197,12 +4191,8 @@ public class PackageManagerService extends IPackageManager.Stub {
                 pkg.applicationInfo.flags |= ApplicationInfo.FLAG_UPDATED_SYSTEM_APP;
             }
 
-            if (mFoundPolicyFile && !SELinuxMMAC.passInstallPolicyChecks(pkg) &&
-                SELinuxMMAC.getEnforcingMode()) {
-                Slog.w(TAG, "Installing application package " + pkg.packageName
-                       + " failed due to policy.");
-                mLastScanError = PackageManager.INSTALL_FAILED_POLICY_REJECTED_PERMISSION;
-                return null;
+            if (mFoundPolicyFile) {
+                SELinuxMMAC.assignSeinfoValue(pkg);
             }
 
             pkg.applicationInfo.uid = pkgSetting.appId;
@@ -4460,10 +4450,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                          * Update native library dir if it starts with
                          * /data/data
                          */
-                        // For devices using /datadata, dataPathString will point
-                        // to /datadata while nativeLibraryDir will point to /data/data.
-                        // Thus, compare to /data/data directly to avoid problems.
-                        if (nativeLibraryDir.getPath().startsWith("/data/data")) {
+                        if (nativeLibraryDir.getPath().startsWith(dataPathString)) {
                             setInternalAppNativeLibraryPath(pkg, pkgSetting);
                             nativeLibraryDir = new File(pkg.applicationInfo.nativeLibraryDir);
                         }
@@ -8460,7 +8447,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
             */
         }
-            
+
         synchronized (mPackages) {
             updatePermissionsLPw(newPackage.packageName, newPackage,
                     UPDATE_PERMISSIONS_REPLACE_PKG | (newPackage.permissions.size() > 0
@@ -8862,7 +8849,6 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
-
         // for the uninstall-updates case and restricted profiles, remember the per-
         // userhandle installed state
         int[] allUsers;
@@ -8875,7 +8861,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 perUserInstalled[i] = ps != null ? ps.getInstalled(allUsers[i]) : false;
             }
         }
-
+ 
         synchronized (mInstallLock) {
             if (DEBUG_REMOVE) Slog.d(TAG, "deletePackageX: pkg=" + packageName + " user=" + userId);
             res = deletePackageLI(packageName,
@@ -9179,11 +9165,16 @@ public class PackageManagerService extends IPackageManager.Stub {
                 // they have set the special DELETE_SYSTEM_APP which requests different
                 // semantics than normal for uninstalling system apps.
                 if (DEBUG_REMOVE) Slog.d(TAG, "Only deleting for single user");
+                boolean privacyGuard = android.provider.Settings.Secure.getIntForUser(
+                        mContext.getContentResolver(),
+                        android.provider.Settings.Secure.PRIVACY_GUARD_DEFAULT,
+                        0, user.getIdentifier()) == 1;
                 ps.setUserState(user.getIdentifier(),
                         COMPONENT_ENABLED_STATE_DEFAULT,
                         false, //installed
                         true,  //stopped
                         true,  //notLaunched
+                        privacyGuard,
                         null, null, null);
                 if (!isSystemApp(ps)) {
                     if (ps.isAnyInstalled(sUserManager.getUserIds())) {
@@ -9790,6 +9781,60 @@ public class PackageManagerService extends IPackageManager.Stub {
         }
 
         return num;
+    }
+
+    @Override
+    public void setPrivacyGuardSetting(String appPackageName,
+            boolean enabled, int userId) {
+        if (!sUserManager.exists(userId)) return;
+        setPrivacyGuard(appPackageName, enabled, userId);
+    }
+
+    @Override
+    public boolean getPrivacyGuardSetting(String packageName, int userId) {
+        if (!sUserManager.exists(userId)) return false;
+        int uid = Binder.getCallingUid();
+        enforceCrossUserPermission(uid, userId, false, "get privacy guard");
+        // reader
+        synchronized (mPackages) {
+            return mSettings.getPrivacyGuardSettingLPr(packageName, userId);
+        }
+    }
+
+    private void setPrivacyGuard(final String packageName,
+            final boolean enabled, final int userId) {
+        PackageSetting pkgSetting;
+        final int uid = Binder.getCallingUid();
+        final int permission = mContext.checkCallingPermission(
+                android.Manifest.permission.CHANGE_PRIVACY_GUARD_STATE);
+        final boolean allowedByPermission = (permission == PackageManager.PERMISSION_GRANTED);
+        enforceCrossUserPermission(uid, userId, false, "set privacy guard");
+
+        synchronized (mPackages) {
+            pkgSetting = mSettings.mPackages.get(packageName);
+            if (pkgSetting == null) {
+                throw new IllegalArgumentException(
+                        "Unknown package: " + packageName);
+            }
+            // Allow root and verify that userId is not being specified by a different user
+            if (!allowedByPermission && !UserHandle.isSameApp(uid, pkgSetting.appId)) {
+                throw new SecurityException(
+                        "Permission Denial: attempt to change privacy guard state from pid="
+                        + Binder.getCallingPid()
+                        + ", uid=" + uid + ", package uid=" + pkgSetting.appId);
+            }
+            if (pkgSetting.isPrivacyGuard(userId) == enabled) {
+                // Nothing to do
+                return;
+            }
+            pkgSetting.setPrivacyGuard(enabled, userId);
+            mSettings.writePackageRestrictionsLPr(userId);
+            try {
+                ActivityManagerNative.getDefault().forceStopPackage(packageName, userId);
+            } catch (RemoteException e) {
+                //nothing
+            }
+        }
     }
 
     @Override

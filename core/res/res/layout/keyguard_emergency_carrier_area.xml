@@ -72,4 +72,5 @@
             android:drawablePadding="8dip"
             android:visibility="gone"/>
     </LinearLayout>
+
 </com.android.internal.policy.impl.keyguard.EmergencyCarrierArea>

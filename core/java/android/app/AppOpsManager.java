@@ -17,7 +17,6 @@
 package android.app;
 
 import android.Manifest;
-
 import com.android.internal.app.IAppOpsService;
 import com.android.internal.app.IAppOpsCallback;
 
@@ -423,14 +422,6 @@ public class AppOpsManager {
         }
     }
 
-    /** @hide */
-    public void resetAllModes() {
-        try {
-            mService.resetAllModes();
-        } catch (RemoteException e) {
-        }
-    }
-
     public void startWatchingMode(int op, String packageName, final Callback callback) {
         synchronized (mModeWatchers) {
             IAppOpsCallback cb = mModeWatchers.get(callback);
@@ -538,21 +529,5 @@ public class AppOpsManager {
 
     public void finishOp(int op) {
         finishOp(op, Process.myUid(), mContext.getBasePackageName());
-    }
-
-    public boolean getPrivacyGuardSettingForPackage(int uid, String packageName) {
-        try {
-            return mService.getPrivacyGuardSettingForPackage(uid, packageName);
-        } catch (RemoteException e) {
-        }
-        return false;
-    }
-
-    public void setPrivacyGuardSettingForPackage(int uid, String packageName,
-            boolean state) {
-        try {
-            mService.setPrivacyGuardSettingForPackage(uid, packageName, state);
-        } catch (RemoteException e) {
-        }
     }
 }

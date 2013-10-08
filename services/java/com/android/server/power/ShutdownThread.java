@@ -47,7 +47,6 @@ import com.android.internal.telephony.ITelephony;
 
 import android.util.Log;
 import android.view.WindowManager;
-import android.view.KeyEvent;
 
 public final class ShutdownThread extends Thread {
     // constants
@@ -123,73 +122,31 @@ public final class ShutdownThread extends Thread {
                         ? com.android.internal.R.string.shutdown_confirm_question
                         : com.android.internal.R.string.shutdown_confirm);
 
-         Log.d(TAG, "Notifying thread to start shutdown longPressBehavior=" + longPressBehavior);
+        Log.d(TAG, "Notifying thread to start shutdown longPressBehavior=" + longPressBehavior);
 
         if (confirm) {
             final CloseDialogReceiver closer = new CloseDialogReceiver(context);
-            final AlertDialog dialog;
-            if (mReboot && !mRebootSafeMode){
-                dialog = new AlertDialog.Builder(context)
-                        .setIcon(android.R.drawable.ic_dialog_alert)
-                        .setTitle(com.android.internal.R.string.reboot_system)
-                        .setSingleChoiceItems(com.android.internal.R.array.shutdown_reboot_options, 0, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                if (which < 0) {
-                                    return;
-                                }
-                                
-
-                                String actions[] = context.getResources().getStringArray(com.android.internal.R.array.shutdown_reboot_actions);
-
-                                if (actions != null && which < actions.length) {
-                                    mRebootReason = actions[which];
-                                }
-                            }
-                        })
-                        .setPositiveButton(com.android.internal.R.string.yes, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                mReboot = true;
-                                beginShutdownSequence(context,true);
-                            }
-                        })
-                        .setNegativeButton(com.android.internal.R.string.no, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                mReboot = false;
-                                dialog.cancel();
-                            }
-                        })
-                        .create();
-                        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
-                            public boolean onKey (DialogInterface dialog, int keyCode, KeyEvent event) {
-                                if (keyCode == KeyEvent.KEYCODE_BACK) {
-                                    mReboot = false;
-                                    dialog.cancel();
-                                }
-                                return true;
-                            }
-                        });
-            } else {
-                dialog = new AlertDialog.Builder(context)
-                        .setTitle(mRebootSafeMode
-                                ? com.android.internal.R.string.reboot_safemode_title
-                                : com.android.internal.R.string.power_off)
-                        .setMessage(resourceId)
-                        .setPositiveButton(com.android.internal.R.string.yes, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                beginShutdownSequence(context,false);
-                            }
-                        })
-                        .setNegativeButton(com.android.internal.R.string.no, null)
-                        .create();
+            if (sConfirmDialog != null) {
+                sConfirmDialog.dismiss();
             }
-
-            closer.dialog = dialog;
-            dialog.setOnDismissListener(closer);
-            dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
-            dialog.show();
-
+            sConfirmDialog = new AlertDialog.Builder(context)
+                    .setTitle(mRebootSafeMode
+                            ? com.android.internal.R.string.reboot_safemode_title
+                            : com.android.internal.R.string.power_off)
+                    .setMessage(resourceId)
+                    .setPositiveButton(com.android.internal.R.string.yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            beginShutdownSequence(context);
+                        }
+                    })
+                    .setNegativeButton(com.android.internal.R.string.no, null)
+                    .create();
+            closer.dialog = sConfirmDialog;
+            sConfirmDialog.setOnDismissListener(closer);
+            sConfirmDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
+            sConfirmDialog.show();
         } else {
-            beginShutdownSequence(context,false);
+            beginShutdownSequence(context);
         }
     }
 
@@ -244,7 +201,7 @@ public final class ShutdownThread extends Thread {
         shutdownInner(context, confirm);
     }
 
-    private static void beginShutdownSequence(Context context,boolean isReboot) {
+    private static void beginShutdownSequence(Context context) {
         synchronized (sIsStartedGuard) {
             if (sIsStarted) {
                 Log.d(TAG, "Shutdown sequence already running, returning.");
@@ -252,14 +209,16 @@ public final class ShutdownThread extends Thread {
             }
             sIsStarted = true;
         }
+        
+        final int shutdownMessageId = mRebootReason == null
+                ? com.android.internal.R.string.shutdown_progress
+                : com.android.internal.R.string.reboot_progress;
 
         // throw up an indeterminate system dialog to indicate radio is
         // shutting down.
         ProgressDialog pd = new ProgressDialog(context);
-        pd.setTitle(context.getText(isReboot ? com.android.internal.R.string.reboot_system :
-                com.android.internal.R.string.power_off));
-        pd.setMessage(context.getText(isReboot ? com.android.internal.R.string.reboot_progress :
-                com.android.internal.R.string.shutdown_progress));
+        //pd.setTitle(context.getText(com.android.internal.R.string.power_off));
+        pd.setMessage(context.getText(shutdownMessageId));
         pd.setIndeterminate(true);
         pd.setCancelable(false);
         pd.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
@@ -342,9 +301,7 @@ public final class ShutdownThread extends Thread {
         
         // First send the high-level shut down broadcast.
         mActionDone = false;
-        Intent intent = new Intent(Intent.ACTION_SHUTDOWN);
-        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-        mContext.sendOrderedBroadcastAsUser(intent,
+        mContext.sendOrderedBroadcastAsUser(new Intent(Intent.ACTION_SHUTDOWN),
                 UserHandle.ALL, null, br, mHandler, 0, null, null);
         
         final long endTime = SystemClock.elapsedRealtime() + MAX_BROADCAST_TIME;

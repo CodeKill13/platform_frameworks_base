@@ -27,8 +27,8 @@ import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.provider.Settings;
 import android.text.format.DateFormat;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.Slog;
 import android.view.Gravity;
@@ -55,12 +55,6 @@ public class KeyguardWidgetPager extends PagedView implements PagedView.PageSwit
     protected static float OVERSCROLL_MAX_ROTATION = 30;
     private static final boolean PERFORM_OVERSCROLL_ROTATION = true;
 
-    private static final String[] CLOCK_WIDGET_PACKAGES = new String[] {
-        "com.android.deskclock",
-        "de.devmil.minimaltext",
-        "in.vineetsirohi.customwidget",
-        "net.nurik.roman.dashclock"
-    };
     private static final int FLAG_HAS_LOCAL_HOUR = 0x1;
     private static final int FLAG_HAS_LOCAL_MINUTE = 0x2;
 
@@ -144,31 +138,21 @@ public class KeyguardWidgetPager extends PagedView implements PagedView.PageSwit
 
     @Override
     public void onPageSwitched(View newPage, int newPageIndex) {
-        boolean showingStatusWidget = false;
+        boolean showingClock = false;
         if (newPage instanceof ViewGroup) {
             ViewGroup vg = (ViewGroup) newPage;
             if (vg.getChildAt(0) instanceof KeyguardStatusView) {
-                showingStatusWidget = true;
-            } else if (vg.getChildAt(0) instanceof AppWidgetHostView) {
-                AppWidgetProviderInfo info =
-                        ((AppWidgetHostView) vg.getChildAt(0)).getAppWidgetInfo();
-                String widgetPackage = info.provider.getPackageName();
-                for (String packageName : CLOCK_WIDGET_PACKAGES) {
-                    if (packageName.equals(widgetPackage)) {
-                        showingStatusWidget = true;
-                        break;
-                    }
-                }
+                showingClock = true;
             }
         }
 
         if (newPage != null &&
                 findClockInHierarchy(newPage) == (FLAG_HAS_LOCAL_HOUR | FLAG_HAS_LOCAL_MINUTE)) {
-            showingStatusWidget = true;
+            showingClock = true;
         }
 
         // Disable the status bar clock if we're showing the default status widget
-        if (showingStatusWidget) {
+        if (showingClock) {
             setSystemUiVisibility(getSystemUiVisibility() | View.STATUS_BAR_DISABLE_CLOCK);
         } else {
             setSystemUiVisibility(getSystemUiVisibility() & ~View.STATUS_BAR_DISABLE_CLOCK);
@@ -527,8 +511,7 @@ public class KeyguardWidgetPager extends PagedView implements PagedView.PageSwit
     protected void screenScrolled(int screenCenter) {
         mScreenCenter = screenCenter;
         updatePageAlphaValues(screenCenter);
-        int count = getChildCount();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < getChildCount(); i++) {
             KeyguardWidgetFrame v = getWidgetPageAt(i);
             if (v == mDragView) continue;
             if (v != null) {
@@ -618,11 +601,7 @@ public class KeyguardWidgetPager extends PagedView implements PagedView.PageSwit
         for (int i = 0; i < count; i++) {
             KeyguardWidgetFrame child = getWidgetPageAt(i);
             if (i != mCurrentPage) {
-				if (Settings.System.getBoolean(getContext().getContentResolver(),
-				        Settings.System.LOCKSCREEN_HIDE_INITIAL_PAGE_HINTS, false)) {
-                child.fadeFrame(this, true, KeyguardWidgetFrame.OUTLINE_ALPHA_MULTIPLIER,
-                        CHILDREN_OUTLINE_FADE_IN_DURATION);
-                }
+                child.setBackgroundAlpha(sidePageAlpha);
                 child.setContentAlpha(0f);
             } else {
                 child.setBackgroundAlpha(0f);
@@ -633,7 +612,10 @@ public class KeyguardWidgetPager extends PagedView implements PagedView.PageSwit
 
     public void showInitialPageHints() {
         mShowingInitialHints = true;
-        updateChildrenContentAlpha(KeyguardWidgetFrame.OUTLINE_ALPHA_MULTIPLIER);
+        if (!Settings.System.getBoolean(getContext().getContentResolver(),
+                        Settings.System.LOCKSCREEN_HIDE_INITIAL_PAGE_HINTS, false)) {
+            updateChildrenContentAlpha(KeyguardWidgetFrame.OUTLINE_ALPHA_MULTIPLIER);
+        }
     }
 
     @Override

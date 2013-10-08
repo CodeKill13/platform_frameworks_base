@@ -605,13 +605,12 @@ static void android_location_GpsLocationProvider_agps_data_conn_open(JNIEnv* env
         return;
     }
     const char *apnStr = env->GetStringUTFChars(apn, NULL);
-
 #ifdef NEW_QC_GPS
     sAGpsInterface->data_conn_open(0, apnStr, 0);
 #else
     sAGpsInterface->data_conn_open(apnStr);
-    env->ReleaseStringUTFChars(apn, apnStr);
 #endif
+    env->ReleaseStringUTFChars(apn, apnStr);
 }
 
 static void android_location_GpsLocationProvider_agps_data_conn_closed(JNIEnv* env, jobject obj)

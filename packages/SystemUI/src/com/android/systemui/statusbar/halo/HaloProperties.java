@@ -18,8 +18,6 @@ package com.android.systemui.statusbar.halo;
 
 import android.os.Handler;
 import android.content.ContentResolver;
-import android.os.Handler;
-import android.content.Context;
 import android.database.ContentObserver;
 import android.graphics.ColorFilterMaker;
 import android.content.BroadcastReceiver;
@@ -135,11 +133,6 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
     protected ImageView mHaloNumberIcon;
     protected RelativeLayout mHaloNumberContainer;
 
-    private boolean mAttached = false;
-
-    private SettingsObserver mSettingsObserver;
-    private Handler mHandler;
-
     private float mFraction = 1.0f;
     private int mHaloMessageNumber = 0;
     private MessageType mHaloMessageType = MessageType.MESSAGE;
@@ -150,6 +143,8 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
     private int mCircleColor = 0;
     private int mSpeechColor = 0;
     private int mSpeechTextColor = 0;
+
+    Handler mHandler;
 
     CustomObjectAnimator mHaloOverlayAnimator;
 
@@ -208,34 +203,14 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
         mContext.registerReceiver(mBatteryReceiver,
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
+        mHandler = new Handler();
+        SettingsObserver settingsObserver = new SettingsObserver(mHandler);
+        settingsObserver.observe();
+
         NetworkController controller = new NetworkController(mContext);
         controller.addNetworkSignalChangedCallback(this);
 
         mCm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        mHandler = new Handler();
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-
-        if (!mAttached) {
-            mAttached = true;
-            mSettingsObserver = new SettingsObserver(new Handler());
-            mSettingsObserver.observe();
-            updateColorView();
-        }
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-
-        if (mAttached) {
-            mContext.getContentResolver().unregisterContentObserver(mSettingsObserver);
-            mAttached = false;
-        }
     }
 
     int newPaddingHShort;
@@ -286,7 +261,7 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
     }
 
     public int getHaloX() {
-        return mHaloX;
+        return mHaloX; 
     }
 
     public int getHaloY() {
@@ -298,7 +273,7 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
     }
 
     public int getHaloContentY() {
-        return mHaloContentY;
+        return mHaloContentY; 
     }
 
     protected CustomObjectAnimator msgNumberFlipAnimator = new CustomObjectAnimator(this);
@@ -504,6 +479,71 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
         mLastContentStateLeft = contentLeft;
     }
 
+    class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            ContentResolver resolver = mContext.getContentResolver();
+
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.HALO_COLORS), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.HALO_CIRCLE_COLOR), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.HALO_BUBBLE_COLOR), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.HALO_BUBBLE_TEXT_COLOR), false, this);
+            updateColorView();
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            updateColorView();
+        }
+    }
+
+    private void updateColorView() {
+        ContentResolver cr = mContext.getContentResolver();
+        mEnableColor = Settings.System.getInt(cr,
+               Settings.System.HALO_COLORS, 0) == 1;
+        mCircleColor = Settings.System.getInt(cr,
+               Settings.System.HALO_CIRCLE_COLOR, 0xFF33B5E5);
+        mSpeechColor = Settings.System.getInt(cr,
+               Settings.System.HALO_BUBBLE_COLOR, 0xFF33B5E5);
+        mSpeechTextColor = Settings.System.getInt(cr, 
+               Settings.System.HALO_BUBBLE_TEXT_COLOR, 0xFFFFFFFF);
+
+        if (mEnableColor) {
+           // Ring
+           mHaloBg.setColorFilter(mCircleColor, PorterDuff.Mode.SRC_IN);
+
+           // Speech bubbles
+           mHaloSpeechL.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
+           mHaloSpeechR.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
+           mHaloSpeechLD.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
+           mHaloSpeechRD.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
+
+           // Speech text color
+           mHaloTextView.setTextColor(mSpeechTextColor);
+        } else {
+           // Clear that color away! Just in case.
+
+           // Ring
+           mHaloBg.clearColorFilter();
+
+           // Speech bubbles
+           mHaloSpeechL.clearColorFilter();
+           mHaloSpeechR.clearColorFilter();
+           mHaloSpeechLD.clearColorFilter();
+           mHaloSpeechRD.clearColorFilter();
+
+           // Return back to default color
+           mHaloTextView.setTextColor(getResources().getColor(R.color.halo_text_color));
+        }
+    }
+
     public interface OnClockChangedListener {
         public abstract void onChange(String s);
     }
@@ -679,70 +719,5 @@ public class HaloProperties extends FrameLayout implements BatteryStateChangeCal
             string = string.substring(0, length - 1);
         }
         return string;
-    }
-
-    public class SettingsObserver extends ContentObserver {
-        SettingsObserver(Handler handler) {
-            super(handler);
-        }
-
-        void observe() {
-            ContentResolver resolver = mContext.getContentResolver();
-
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.HALO_COLORS), false, this);
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.HALO_CIRCLE_COLOR), false, this);
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.HALO_BUBBLE_COLOR), false, this);
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.HALO_BUBBLE_TEXT_COLOR), false, this);
-            updateColorView();
-        }
-
-        @Override
-        public void onChange(boolean selfChange) {
-            updateColorView();
-        }
-    }
-
-    private void updateColorView() {
-        ContentResolver cr = mContext.getContentResolver();
-        mEnableColor = Settings.System.getInt(cr,
-               Settings.System.HALO_COLORS, 0) == 1;
-        mCircleColor = Settings.System.getInt(cr,
-               Settings.System.HALO_CIRCLE_COLOR, 0xFF33B5E5);
-        mSpeechColor = Settings.System.getInt(cr,
-               Settings.System.HALO_BUBBLE_COLOR, 0xFF33B5E5);
-        mSpeechTextColor = Settings.System.getInt(cr,
-               Settings.System.HALO_BUBBLE_TEXT_COLOR, 0xFFFFFFFF);
-
-        if (mEnableColor) {
-           // Ring
-           mHaloBg.setColorFilter(mCircleColor, PorterDuff.Mode.SRC_IN);
-
-           // Speech bubbles
-           mHaloSpeechL.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
-           mHaloSpeechR.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
-           mHaloSpeechLD.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
-           mHaloSpeechRD.setColorFilter(mSpeechColor, PorterDuff.Mode.SRC_IN);
-
-           // Speech text color
-           mHaloTextView.setTextColor(mSpeechTextColor);
-        } else {
-           // Clear that color away! Just in case.
-
-           // Ring
-           mHaloBg.clearColorFilter();
-
-           // Speech bubbles
-           mHaloSpeechL.clearColorFilter();
-           mHaloSpeechR.clearColorFilter();
-           mHaloSpeechLD.clearColorFilter();
-           mHaloSpeechRD.clearColorFilter();
-
-           // Return back to default color
-           mHaloTextView.setTextColor(getResources().getColor(R.color.halo_text_color));
-        }
     }
 }

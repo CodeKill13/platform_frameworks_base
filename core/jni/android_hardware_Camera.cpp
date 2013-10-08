@@ -503,10 +503,10 @@ static void android_hardware_Camera_native_setup(JNIEnv *env, jobject thiz,
     jobject weak_this, jint cameraId, jstring clientPackageName)
 {
     // Convert jstring to String16
-    const char16_t *rawClientName = (char16_t*)env->GetStringChars(clientPackageName, NULL);
+    const char16_t *rawClientName = env->GetStringChars(clientPackageName, NULL);
     jsize rawClientNameLen = env->GetStringLength(clientPackageName);
     String16 clientName(rawClientName, rawClientNameLen);
-    env->ReleaseStringChars(clientPackageName, (jchar*)rawClientName);
+    env->ReleaseStringChars(clientPackageName, rawClientName);
 
     sp<Camera> camera = Camera::connect(cameraId, clientName,
             Camera::USE_CALLING_UID);
@@ -666,24 +666,6 @@ static void android_hardware_Camera_setHasPreviewCallback(JNIEnv *env, jobject t
     context->setCallbackMode(env, installed, manualBuffer);
 }
 
-static void android_hardware_Camera_setMetadataCb(JNIEnv *env, jobject thiz, jboolean mode)
-{
-    ALOGV("setMetadataCb: mode:%d", (int)mode);
-    JNICameraContext* context;
-    status_t rc;
-    sp<Camera> camera = get_native_camera(env, thiz, &context);
-    if (camera == 0) return;
-
-    if(mode == true)
-        rc = camera->sendCommand(CAMERA_CMD_METADATA_ON, 0, 0);
-    else
-        rc = camera->sendCommand(CAMERA_CMD_METADATA_OFF, 0, 0);
-
-    if (rc != NO_ERROR) {
-        jniThrowException(env, "java/lang/RuntimeException", "set metadata mode failed");
-    }
-}
-
 static void android_hardware_Camera_addCallbackBuffer(JNIEnv *env, jobject thiz, jbyteArray bytes, int msgType) {
     ALOGV("addCallbackBuffer: 0x%x", msgType);
 
@@ -758,7 +740,7 @@ static void android_hardware_Camera_setParameters(JNIEnv *env, jobject thiz, jst
     const jchar* str = env->GetStringCritical(params, 0);
     String8 params8;
     if (params) {
-        params8 = String8((char16_t*)str, env->GetStringLength(params));
+        params8 = String8(str, env->GetStringLength(params));
         env->ReleaseStringCritical(params, str);
     }
     if (camera->setParameters(params8) != NO_ERROR) {
@@ -976,9 +958,6 @@ static JNINativeMethod camMethods[] = {
   { "native_setHistogramMode",
     "(Z)V",
      (void *)android_hardware_Camera_setHistogramMode },
-  { "native_setMetadataCb",
-    "(Z)V",
-    (void *)android_hardware_Camera_setMetadataCb },
   { "native_sendHistogramData",
     "()V",
      (void *)android_hardware_Camera_sendHistogramData },

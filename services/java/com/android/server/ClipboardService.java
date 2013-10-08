@@ -154,36 +154,31 @@ public class ClipboardService extends IClipboard.Stub {
             if (clip != null && clip.getItemCount() <= 0) {
                 throw new IllegalArgumentException("No items");
             }
-            final int callingUid = Binder.getCallingUid();
-            if (mAppOps.noteOp(AppOpsManager.OP_WRITE_CLIPBOARD, callingUid,
+            if (mAppOps.noteOp(AppOpsManager.OP_WRITE_CLIPBOARD, Binder.getCallingUid(),
                     callingPackage) != AppOpsManager.MODE_ALLOWED) {
                 return;
             }
-            checkDataOwnerLocked(clip, callingUid);
+            checkDataOwnerLocked(clip, Binder.getCallingUid());
             clearActiveOwnersLocked();
             PerUserClipboard clipboard = getClipboard();
             clipboard.primaryClip = clip;
-            final long ident = Binder.clearCallingIdentity();
             final int n = clipboard.primaryClipListeners.beginBroadcast();
-            try {
-                for (int i = 0; i < n; i++) {
-                    try {
-                        ListenerInfo li = (ListenerInfo)
-                                clipboard.primaryClipListeners.getBroadcastCookie(i);
-                        if (mAppOps.checkOpNoThrow(AppOpsManager.OP_READ_CLIPBOARD, li.mUid,
-                                li.mPackageName) == AppOpsManager.MODE_ALLOWED) {
-                            clipboard.primaryClipListeners.getBroadcastItem(i)
-                                    .dispatchPrimaryClipChanged();
-                        }
-                    } catch (RemoteException e) {
-                        // The RemoteCallbackList will take care of removing
-                        // the dead object for us.
+            for (int i = 0; i < n; i++) {
+                try {
+                    ListenerInfo li = (ListenerInfo)
+                            clipboard.primaryClipListeners.getBroadcastCookie(i);
+                    if (mAppOps.checkOpNoThrow(AppOpsManager.OP_READ_CLIPBOARD, li.mUid,
+                            li.mPackageName) == AppOpsManager.MODE_ALLOWED) {
+                        clipboard.primaryClipListeners.getBroadcastItem(i)
+                                .dispatchPrimaryClipChanged();
                     }
+                } catch (RemoteException e) {
+
+                    // The RemoteCallbackList will take care of removing
+                    // the dead object for us.
                 }
-            } finally {
-                clipboard.primaryClipListeners.finishBroadcast();
-                Binder.restoreCallingIdentity(ident);
             }
+            clipboard.primaryClipListeners.finishBroadcast();
         }
     }
     

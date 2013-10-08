@@ -566,7 +566,7 @@ public class TelephonyManager {
     public String getNetworkCountryIso() {
         return SystemProperties.get(TelephonyProperties.PROPERTY_OPERATOR_ISO_COUNTRY);
     }
-
+    
     /**
      * @hide
      */
@@ -652,6 +652,7 @@ public class TelephonyManager {
      * @see #NETWORK_TYPE_LTE
      * @see #NETWORK_TYPE_EHRPD
      * @see #NETWORK_TYPE_HSPAP
+     * @see #NETWORK_TYPE_DCHSPAP
      *
      * @hide
      */
@@ -994,17 +995,10 @@ public class TelephonyManager {
      */
     public String getLine1Number() {
         try {
-            final IPhoneSubInfo subinfo = getSubscriberInfo();
-            if (subinfo == null) {
-                Rlog.e("WTF", "getSubscriberInfo IS A BAG OF DICKS! ");
-                return null;
-            }
-            return subinfo.getLine1Number();
+            return getSubscriberInfo().getLine1Number();
         } catch (RemoteException ex) {
-            Rlog.e("WTF", "RemoteException in getSubscriberInfo() "+ex);
             return null;
         } catch (NullPointerException ex) {
-            Rlog.e("WTF", "NullPointerException in getSubscriberInfo() "+ex);
             // This could happen before phone restarts due to crashing
             return null;
         }

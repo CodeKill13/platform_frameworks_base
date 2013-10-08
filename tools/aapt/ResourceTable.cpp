@@ -2528,6 +2528,7 @@ ResourceTable::validateLocalizations(void)
          nameIter != mLocalizations.end();
          nameIter++) {
         const set<String8>& configSet = nameIter->second;   // naming convenience
+
 #ifdef SHOW_DEFAULT_TRANSLATION_WARNINGS
         // Look for strings with no default localization
         if (configSet.count(defaultLocale) == 0) {
@@ -2542,7 +2543,7 @@ ResourceTable::validateLocalizations(void)
             // !!! TODO: throw an error here in some circumstances
         }
 #endif
-#ifndef HIDE_LOCALIZATION_WARNINGS
+#ifdef SHOW_LOCALIZATION_WARNINGS
         // Check that all requested localizations are present for this string
         if (mBundle->getConfigurations() != NULL && mBundle->getRequireLocalization()) {
             const char* allConfigs = mBundle->getConfigurations();
@@ -2583,6 +2584,7 @@ ResourceTable::validateLocalizations(void)
         }
 #endif
     }
+
     return err;
 }
 
@@ -2809,7 +2811,7 @@ status_t ResourceTable::flatten(Bundle* bundle, const sp<AaptFile>& dest)
             
             // We need to write one type chunk for each configuration for
             // which we have entries in this type.
-            const size_t NC = t != NULL ? t->getUniqueConfigs().size() : 0;
+            const size_t NC = t->getUniqueConfigs().size();
             
             const size_t typeSize = sizeof(ResTable_type) + sizeof(uint32_t)*N;
             
@@ -2817,7 +2819,7 @@ status_t ResourceTable::flatten(Bundle* bundle, const sp<AaptFile>& dest)
                 ConfigDescription config = t->getUniqueConfigs().itemAt(ci);
 
                 NOISY(printf("Writing config %d config: imsi:%d/%d lang:%c%c cnt:%c%c "
-                     "orien:%d ui:%d touch:%d density:%d key:%d inp:%d nav:%d sz:%dx%d "
+                     "orien:%d uiInverted:%d ui:%d touch:%d density:%d key:%d inp:%d nav:%d sz:%dx%d "
                      "sw%ddp w%ddp h%ddp dir:%d\n",
                       ti+1,
                       config.mcc, config.mnc,
@@ -2826,6 +2828,7 @@ status_t ResourceTable::flatten(Bundle* bundle, const sp<AaptFile>& dest)
                       config.country[0] ? config.country[0] : '-',
                       config.country[1] ? config.country[1] : '-',
                       config.orientation,
+                      config.uiInvertedMode,
                       config.uiMode,
                       config.touchscreen,
                       config.density,
@@ -2860,7 +2863,7 @@ status_t ResourceTable::flatten(Bundle* bundle, const sp<AaptFile>& dest)
                 tHeader->entriesStart = htodl(typeSize);
                 tHeader->config = config;
                 NOISY(printf("Writing type %d config: imsi:%d/%d lang:%c%c cnt:%c%c "
-                     "orien:%d ui:%d touch:%d density:%d key:%d inp:%d nav:%d sz:%dx%d "
+                     "orien:%d uiInverted:%d ui:%d touch:%d density:%d key:%d inp:%d nav:%d sz:%dx%d "
                      "sw%ddp w%ddp h%ddp dir:%d\n",
                       ti+1,
                       tHeader->config.mcc, tHeader->config.mnc,
@@ -2869,6 +2872,7 @@ status_t ResourceTable::flatten(Bundle* bundle, const sp<AaptFile>& dest)
                       tHeader->config.country[0] ? tHeader->config.country[0] : '-',
                       tHeader->config.country[1] ? tHeader->config.country[1] : '-',
                       tHeader->config.orientation,
+                      tHeader->config.uiInvertedMode,
                       tHeader->config.uiMode,
                       tHeader->config.touchscreen,
                       tHeader->config.density,

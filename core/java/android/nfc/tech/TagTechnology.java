@@ -164,7 +164,7 @@ public interface TagTechnology extends Closeable {
      * technologies in use.
      * @hide
      */
-    public static final int ISO_PCD_A = 100;
+    public static final int ISO_PCD_A = 11;
 
     /**
      * This technology is an instance of {@link IsoPcdB}.
@@ -173,7 +173,7 @@ public interface TagTechnology extends Closeable {
      * technologies in use.
      * @hide
      */
-    public static final int ISO_PCD_B = 101;
+    public static final int ISO_PCD_B = 12;
 
     /**
      * Get the {@link Tag} object backing this {@link TagTechnology} object.

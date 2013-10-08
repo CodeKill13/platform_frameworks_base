@@ -684,22 +684,22 @@ public class Intent implements Parcelable, Cloneable {
      */
     @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
     public static final String ACTION_CREATE_SHORTCUT = "android.intent.action.CREATE_SHORTCUT";
-
+    
     /**
-     * PhoneWindowManager: Take Screenshot via takeScreenshot()
+     *  Global Action: Shows power menu dialog
      *  <p>Input: nothing
      *  <p>Output: nothing
      *  @hide
      */
-    public static final String ACTION_SCREENSHOT = "android.intent.action.SCREENSHOT";
-
+    public static final String ACTION_POWERMENU = "android.intent.action.POWERMENU";
+    
     /**
-     *  Global Action: Shows 3-way reboot menu dialog
+     *  Global Action: Shows power menu reboot dialog
      *  <p>Input: nothing
      *  <p>Output: nothing
      *  @hide
      */
-    public static final String ACTION_REBOOTMENU = "android.intent.action.REBOOTMENU";
+    public static final String ACTION_POWERMENU_REBOOT = "android.intent.action.POWERMENU_REBOOT";
 
     /**
      * The name of the extra used to define the Intent of a shortcut.
@@ -2193,31 +2193,6 @@ public class Intent implements Parcelable, Cloneable {
             "android.intent.action.HEADSET_PLUG";
 
     /**
-     * Broadcast Action: WiFi Display audio is enabled or disabled
-     *
-     * <p>The intent will have the following extra values:
-     * <ul>
-     *   <li><em>state</em> - 0 for disabled, 1 for enabled. </li>
-     * </ul>
-     * @hide
-     */
-    public static final String ACTION_WIFI_DISPLAY_AUDIO =
-            "qualcomm.intent.action.WIFI_DISPLAY_AUDIO";
-
-    /**
-     * Broadcast Action: WiFi Display video is enabled or disabled
-     *
-     * <p>The intent will have the following extra values:
-     * <ul>
-     *   <li><em>state</em> - 0 for disabled, 1 for enabled. </li>
-     * </ul>
-     * @hide
-     */
-
-    public static final String ACTION_WIFI_DISPLAY_VIDEO =
-            "qualcomm.intent.action.WIFI_DISPLAY_VIDEO";
-
-    /**
      * Broadcast Action: An analog audio speaker/headset plugged in or unplugged.
      *
      * <p>The intent will have the following extra values:
@@ -2645,19 +2620,6 @@ public class Intent implements Parcelable, Cloneable {
             "android.intent.action.QUICK_CLOCK";
 
     /**
-     * Broadcast Action: Indicate that unrecoverable error happened during app launch.
-     * Could indicate that curently applied theme is malicious.
-     * @hide
-     */
-    public static final String ACTION_APP_LAUNCH_FAILURE = "com.tmobile.intent.action.APP_LAUNCH_FAILURE";
-
-    /**
-     * Broadcast Action: Request to reset the unrecoverable errors count to 0.
-     * @hide
-     */
-    public static final String ACTION_APP_LAUNCH_FAILURE_RESET = "com.tmobile.intent.action.APP_LAUNCH_FAILURE_RESET";
-
-    /*
      * Broadcast Action: This is broadcast when a user action should request the
      * brightness setting dialog.
      * @hide
@@ -2672,6 +2634,19 @@ public class Intent implements Parcelable, Cloneable {
      * @hide
      */
     public static final String ACTION_GLOBAL_BUTTON = "android.intent.action.GLOBAL_BUTTON";
+
+    /**
+     * Broadcast Action: Indicate that unrecoverable error happened during app launch.
+     * Could indicate that curently applied theme is malicious.
+     * @hide
+     */
+    public static final String ACTION_APP_LAUNCH_FAILURE = "com.tmobile.intent.action.APP_LAUNCH_FAILURE";
+
+    /**
+     * Broadcast Action: Request to reset the unrecoverable errors count to 0.
+     * @hide
+     */
+    public static final String ACTION_APP_LAUNCH_FAILURE_RESET = "com.tmobile.intent.action.APP_LAUNCH_FAILURE_RESET";
 
     // ---------------------------------------------------------------------
     // ---------------------------------------------------------------------
@@ -2806,6 +2781,7 @@ public class Intent implements Parcelable, Cloneable {
      */
     public static final String CATEGORY_FRAMEWORK_INSTRUMENTATION_TEST =
             "android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST";
+
     /**
      * An activity to run when device is inserted into a car dock.
      * Used with {@link #ACTION_MAIN} to launch an activity.  For more
@@ -3331,6 +3307,7 @@ public class Intent implements Parcelable, Cloneable {
      * places where the framework may automatically set the exclude flag).
      */
     public static final int FLAG_INCLUDE_STOPPED_PACKAGES = 0x00000020;
+
     /**
      * If set, the new activity is not kept in the history stack.  As soon as
      * the user navigates away from it, the activity is finished.  This may also
@@ -3550,7 +3527,7 @@ public class Intent implements Parcelable, Cloneable {
      * If set, this intent will always match start up as a floating window
      * in mutil window scenarios.
      */
-    public static final int FLAG_FLOATING_WINDOW = 0x00002000;
+    public static final int FLAG_FLOATING_WINDOW = 0x00002000; 	
     /**
      * If set, when sending a broadcast only registered receivers will be
      * called -- no BroadcastReceiver components will be launched.

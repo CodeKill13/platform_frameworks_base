@@ -30,7 +30,6 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.StringTokenizer;
 
 public class ProcessStats {
@@ -155,7 +154,7 @@ public class ProcessStats {
 
     private boolean mFirst = true;
 
-    private byte[] mBuffer = new byte[4096];
+    private byte[] mBuffer = new byte[512];
 
     /**
      * The time in microseconds that the CPU has been running at each speed.
@@ -171,11 +170,6 @@ public class ProcessStats {
      * The different speeds that the CPU can be running at.
      */
     private long[] mCpuSpeeds;
-
-    /**
-     * The lastmodified date of sysfs entry to detect change in available scaling frequency
-     */
-    private Date mLastModified = null;
 
     public static class Stats {
         public final int pid;
@@ -563,25 +557,9 @@ public class ProcessStats {
         long[] tempTimes = out;
         long[] tempSpeeds = mCpuSpeeds;
         final int MAX_SPEEDS = 60;
-        Date currentModified = null;
-
-        try {
-            File file = new File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies");
-            if (file.exists()) {
-                currentModified = new Date(file.lastModified());
-            }
-        } catch (Exception e) {
-            Slog.i(TAG, "Exception = " + e);
-            }
-        if (mLastModified == null) {
-            mLastModified = currentModified;
-        }
-        if (out == null || out.length == 0 || mLastModified != currentModified) {
+        if (out == null) {
             tempTimes = new long[MAX_SPEEDS]; // Hopefully no more than that
             tempSpeeds = new long[MAX_SPEEDS];
-            mLastModified = currentModified;
-            // We need to clean up previous scaling frequency since they need to be updated
-            out = null;
         }
         int speed = 0;
         String file = readFile("/sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state", '\0');
@@ -602,14 +580,11 @@ public class ProcessStats {
                         Slog.v(TAG, "First time : Speed/Time = " + tempSpeeds[speed - 1]
                               + "\t" + tempTimes[speed - 1]);
                     }
-               } catch (Exception e) {
-                    if (e instanceof NumberFormatException) {
-                        Slog.i(TAG, "Unable to parse time_in_state");
-                    }
-                    else if (e instanceof ArrayIndexOutOfBoundsException) {
-                        Slog.i(TAG, "Scaling frequency changed while accessing" +
-                            " the time_in_state, It will be handled when the function is called again");
-                    }
+                } catch (NumberFormatException nfe) {
+                    Slog.i(TAG, "Unable to parse time_in_state");
+                } catch (java.util.NoSuchElementException nsee) {
+                    Slog.i(TAG, "time_in_state changed size halfway?");
+                    break;
                 }
             }
         }
@@ -730,7 +705,9 @@ public class ProcessStats {
 
         long sampleTime = mCurrentSampleTime - mLastSampleTime;
         long sampleRealTime = mCurrentSampleRealTime - mLastSampleRealTime;
-        long percAwake = sampleRealTime > 0 ? ((sampleTime*100) / sampleRealTime) : 0;
+        long percAwake = ((sampleRealTime > 0)
+            ? (sampleTime*100) / sampleRealTime
+            : 100);
         if (percAwake != 100) {
             pw.print(" with ");
             pw.print(percAwake);

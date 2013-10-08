@@ -3524,8 +3524,7 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
             // We want to pause the current playing video when switching out
             // from the current WebView/tab.
             if (mHTML5VideoViewProxy != null) {
-                // Use suspend instead of pause to release the decoder
-                mHTML5VideoViewProxy.suspendAndDispatch();
+                mHTML5VideoViewProxy.pauseAndDispatch();
             }
             if (mNativeClass != 0) {
                 nativeSetPauseDrawing(mNativeClass, true);
@@ -3856,7 +3855,6 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
             invalidate();  // So we draw again
 
             if (!mScroller.isFinished()) {
-                mSendScroll.setPostpone(true);
                 int rangeX = computeMaxScrollX();
                 int rangeY = computeMaxScrollY();
                 int overflingDistance = mOverflingDistance;
@@ -3884,7 +3882,6 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
                 if (mOverScrollGlow != null) {
                     mOverScrollGlow.absorbGlow(x, y, oldX, oldY, rangeX, rangeY);
                 }
-                mSendScroll.setPostpone(false);
             } else {
                 if (mTouchMode == TOUCH_DRAG_LAYER_MODE) {
                     // Update the layer position instead of WebView.
@@ -3904,7 +3901,7 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
                     }
                 }
                 if (oldX != getScrollX() || oldY != getScrollY()) {
-                    mSendScroll.send(true);
+                    sendOurVisibleRect();
                 }
             }
         } else {
@@ -4489,13 +4486,6 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
         return selectText(x, y);
     }
 
-    public void clearSelection() {
-        selectionDone();
-        if (mWebViewCore != null) {
-            mWebViewCore.sendMessage(EventHub.CLEAR_SELECT_TEXT);
-        }
-    }
-
     /**
      * Select the word at the indicated content coordinates.
      */
@@ -4513,7 +4503,7 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
     public void onConfigurationChanged(Configuration newConfig) {
         mCachedOverlappingActionModeHeight = -1;
         if (mSelectingText && mOrientation != newConfig.orientation) {
-            clearSelection();
+            selectionDone();
         }
         mOrientation = newConfig.orientation;
         if (mWebViewCore != null && !mBlockWebkitViewMessages) {
@@ -4768,7 +4758,7 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
             if (oldScrollX != getScrollX() || oldScrollY != getScrollY()) {
                 mWebViewPrivate.onScrollChanged(getScrollX(), getScrollY(), oldScrollX, oldScrollY);
             } else {
-                mSendScroll.send(true);
+                sendOurVisibleRect();
             }
         }
     }
@@ -5726,31 +5716,10 @@ public final class WebViewClassic implements WebViewProvider, WebViewProvider.Sc
         contentScrollTo(scrollX, scrollY, false);
     }
 
-    private final class SendScrollToWebCore implements Runnable {
-        public void run() {
-            if (!mInOverScrollMode) {
-                sendOurVisibleRect();
-            }
-        }
-        private boolean mPostpone = false;
-        public void setPostpone(boolean set) { mPostpone = set; }
-        public void send(boolean force) {
-            mPrivateHandler.removeCallbacks(this);
-            if (!mPostpone || force) {
-                run();
-            } else {
-                mPrivateHandler.postAtFrontOfQueue(this);
-            }
-        }
-    }
-
-    SendScrollToWebCore mSendScroll = new SendScrollToWebCore();
-
     @Override
     public void onScrollChanged(int l, int t, int oldl, int oldt) {
-        mSendScroll.send(false);
-
         if (!mInOverScrollMode) {
+            sendOurVisibleRect();
             // update WebKit if visible title bar height changed. The logic is same
             // as getVisibleTitleHeightImpl.
             int titleHeight = getTitleHeight();

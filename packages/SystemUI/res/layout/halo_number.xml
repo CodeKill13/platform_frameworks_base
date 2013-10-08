@@ -30,6 +30,7 @@
             android:layout_height="match_parent"
             android:gravity="center"            
             android:textColor="#fff"
+            android:textStyle="bold"
             android:textSize="@dimen/halo_number_text_size"/>
 
         <ImageView
@@ -41,4 +42,5 @@
             android:alpha="0"/>
 
     </RelativeLayout>
+
 </LinearLayout>

@@ -74,12 +74,17 @@ public class StatusBarWindowView extends FrameLayout
     }
 
     @Override
+    public void dispatchWindowFocusChanged(boolean hasFocus) {
+        this.setFocusableInTouchMode(hasFocus);
+        this.requestFocus();
+    }
+
+    @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
-        boolean canceled = (event.getFlags() & KeyEvent.FLAG_CANCELED) != 0;
         switch (event.getKeyCode()) {
         case KeyEvent.KEYCODE_BACK:
-            if (!down && !canceled) {
+            if (!down && !event.isCanceled()) {
                 mService.animateCollapsePanels();
             }
             return true;

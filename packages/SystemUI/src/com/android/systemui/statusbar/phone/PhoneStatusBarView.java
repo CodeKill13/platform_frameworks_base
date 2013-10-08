@@ -19,18 +19,26 @@ package com.android.systemui.statusbar.phone;
 import java.util.List;
 
 import android.app.ActivityManager;
+import android.app.KeyguardManager;
 import android.app.StatusBarManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 import android.database.ContentObserver;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
+import android.os.Broadcaster;
 import android.os.Handler;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.EventLog;
@@ -39,16 +47,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.accessibility.AccessibilityEvent;
 
+import com.android.internal.util.aokp.BackgroundAlphaColorDrawable;
 import com.android.systemui.EventLogTags;
 import com.android.systemui.R;
-import com.vanir.BackgroundAlphaColorDrawable;
 import com.android.systemui.statusbar.NavigationBarView;
-import com.android.systemui.vanir.VanirAwesome;
 
 public class PhoneStatusBarView extends PanelBar {
     private static final String TAG = "PhoneStatusBarView";
     private static final boolean DEBUG = PhoneStatusBar.DEBUG;
-    private static final boolean DEBUG_GESTURES = false;
+    private static final boolean DEBUG_GESTURES = true;
 
     PhoneStatusBar mBar;
     int mScrimColor;
@@ -60,7 +67,7 @@ public class PhoneStatusBarView extends PanelBar {
     PanelView mLastFullyOpenedPanel = null;
     PanelView mNotificationPanel, mSettingsPanel;
     private boolean mShouldFade;
-    private VanirAwesome mVanirAwesome;
+    private int mToggleStyle;
 
     public PhoneStatusBarView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -73,12 +80,14 @@ public class PhoneStatusBarView extends PanelBar {
         } catch (NotFoundException ex) {
             mSettingsPanelDragzoneFrac = 0f;
         }
-
-        mFullWidthNotifications = (mSettingsPanelDragzoneFrac <= 0f) || Settings.System.getInt(mContext.getContentResolver(), Settings.System.TABLET_STATUSBAR, 0) == 0;
+        mFullWidthNotifications = mSettingsPanelDragzoneFrac <= 0f;
         Drawable bg = mContext.getResources().getDrawable(R.drawable.status_bar_background);
         if(bg instanceof ColorDrawable) {
             setBackground(new BackgroundAlphaColorDrawable(((ColorDrawable) bg).getColor()));
         }
+        // no need for observer, sysui gets killed when the style is changed.
+        mToggleStyle = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.TOGGLES_STYLE, 0);
     }
 
     public void setBar(PhoneStatusBar bar) {
@@ -106,12 +115,12 @@ public class PhoneStatusBarView extends PanelBar {
         }
         pv.setRubberbandingEnabled(!mFullWidthNotifications);
     }
-   
+
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         mBar.onBarViewDetached();
-    }
+    	}
  
     @Override
     public boolean panelsEnabled() {
@@ -145,6 +154,9 @@ public class PhoneStatusBarView extends PanelBar {
                     ? null 
                     : mNotificationPanel;
         }
+        if(mToggleStyle != 0) {
+            return mNotificationPanel;
+        }
 
         // We split the status bar into thirds: the left 2/3 are for notifications, and the
         // right 1/3 for quick settings. If you pull the status bar down a second time you'll
@@ -169,6 +181,7 @@ public class PhoneStatusBarView extends PanelBar {
     public void onPanelPeeked() {
         super.onPanelPeeked();
         mBar.makeExpandedVisible(true);
+        mBar.updateRibbon();
     }
 
     @Override
@@ -186,16 +199,17 @@ public class PhoneStatusBarView extends PanelBar {
     @Override
     public void onAllPanelsCollapsed() {
         super.onAllPanelsCollapsed();
+        Slog.v(TAG, "onAllPanelsCollapsed");
         // give animations time to settle
         mBar.makeExpandedInvisibleSoon();
         mFadingPanel = null;
         mLastFullyOpenedPanel = null;
-        mVanirAwesome.wtfHelper();
     }
 
     @Override
     public void onPanelFullyOpened(PanelView openPanel) {
         super.onPanelFullyOpened(openPanel);
+        Slog.v(TAG, "onPanelFullyOpened: " + openPanel);
         if (openPanel != mLastFullyOpenedPanel) {
             openPanel.sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
         }
@@ -262,10 +276,10 @@ public class PhoneStatusBarView extends PanelBar {
         if (panel.getAlpha() != alpha) {
             panel.setAlpha(alpha);
         }
-        updateBackgroundAlpha(frac);
-        mBar.updateCarrierLabelVisibility(false);
+		updateBackgroundAlpha(frac);
+        updateShortcutsVisibility();
     }
-
+    
     private void updateBackgroundAlpha(float ex) {
         if(mFadingPanel != null || ex > 0) {
             mBar.mTransparencyManager.setTempDisableStatusbarState(true);
@@ -273,5 +287,27 @@ public class PhoneStatusBarView extends PanelBar {
             mBar.mTransparencyManager.setTempDisableStatusbarState(false);
         }
         mBar.mTransparencyManager.update();
+    }
+    
+    public void updateShortcutsVisibility() {
+        // Notification Shortcuts check for fully expanded panel
+        if (mBar.mSettingsButton == null || mBar.mNotificationButton == null) {
+            // Tablet
+            if (mFullyOpenedPanel != null) {
+                mBar.updateNotificationShortcutsVisibility(true);
+            } else {
+                mBar.updateNotificationShortcutsVisibility(false);
+            }
+        } else {
+            // Phone
+            if (mFullyOpenedPanel != null && (mBar.mSettingsButton.getVisibility() == View.VISIBLE &&
+                    !(mBar.mSettingsButton.getVisibility() == View.VISIBLE &&
+                    mBar.mNotificationButton.getVisibility() == View.VISIBLE))) {
+                mBar.updateNotificationShortcutsVisibility(true);
+            } else {
+                mBar.updateNotificationShortcutsVisibility(false);
+            }
+        }
+        mBar.updateCarrierAndWifiLabelVisibility(false);
     }
 }

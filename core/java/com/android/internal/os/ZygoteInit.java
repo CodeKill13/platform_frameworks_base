@@ -25,6 +25,7 @@ import android.net.LocalServerSocket;
 import android.os.Debug;
 import android.os.Process;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.util.EventLog;
 import android.util.Log;
@@ -67,7 +68,10 @@ public class ZygoteInit {
     private static final int LOG_BOOT_PROGRESS_PRELOAD_END = 3030;
 
     /** when preloading, GC after allocating this many bytes */
-    private static final int PRELOAD_GC_THRESHOLD = 50000;
+    private static final String heapgrowthlimit =
+                    SystemProperties.get("dalvik.vm.heapgrowthlimit", "16m");
+    private static final int PRELOAD_GC_THRESHOLD = Integer.parseInt(
+                    heapgrowthlimit.substring(0, heapgrowthlimit.length()-1))*1024*1024/2;
 
     public static final String USAGE_STRING =
             " <\"start-system-server\"|\"\" for startSystemServer>";
@@ -478,7 +482,7 @@ public class ZygoteInit {
         String args[] = {
             "--setuid=1000",
             "--setgid=1000",
-            "--setgroups=1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1018,1021,3001,3002,3003,3004,3006,3007,3009",
+            "--setgroups=1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1018,3001,3002,3003,3006,3007,3009",
             "--capabilities=130104352,130104352",
             "--runtime-init",
             "--nice-name=system_server",

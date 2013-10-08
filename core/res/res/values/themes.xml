@@ -405,14 +405,6 @@ please see themes_device_defaults.xml.
         <item name="android:windowContentOverlay">@null</item>
     </style>
     
-    <!-- Variant of {@link #Theme} that has no title bar and no status bar and extending
-        into the display overscan region. -->
-    <style name="Theme.NoTitleBar.Overscan">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowOverscan">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
     <!-- Theme for a light background with dark text on top.  Set your activity
          to this theme if you would like such an appearance.  As with the
          default theme, you should try to assume little more than that the
@@ -506,14 +498,6 @@ please see themes_device_defaults.xml.
         <item name="android:windowContentOverlay">@null</item>
     </style>
     
-    <!-- Variant of {@link #Theme_Light} that has no title bar and
-         no status bar and extending into the display overscan region. -->
-    <style name="Theme.Light.NoTitleBar.Overscan">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowOverscan">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
     <!-- Variant on {@link #Theme} that ensures the background is
          completely black.  This is useful for things like image viewers and
          media players.   If you want the normal (dark background) theme
@@ -533,13 +517,6 @@ please see themes_device_defaults.xml.
          sets {@link android.R.attr#windowFullscreen} to true.  -->
     <style name="Theme.Black.NoTitleBar.Fullscreen">
         <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-    <!-- Variant of {@link #Theme_Black} that has no title bar and
-         no status bar and extending into the display overscan region. -->
-    <style name="Theme.Black.NoTitleBar.Overscan">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowOverscan">true</item>
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
@@ -1030,6 +1007,10 @@ please see themes_device_defaults.xml.
         <item name="findOnPageNextDrawable">@android:drawable/ic_find_next_holo_dark</item>
         <item name="findOnPagePreviousDrawable">@android:drawable/ic_find_previous_holo_dark</item>
 
+        <item name="drawer_background">@android:drawable/drawer_background_holo_dark</item>
+        <item name="drawer_shadow">@android:drawable/drawer_shadow_holo_dark</item>
+        <item name="ic_drawer">@android:drawable/ic_drawer_holo_dark</item>
+
         <!-- Gallery attributes -->
         <item name="galleryItemBackground">@android:drawable/gallery_item_background</item>
         
@@ -1344,6 +1325,10 @@ please see themes_device_defaults.xml.
         <item name="listDividerAlertDialog">@android:drawable/list_divider_holo_light</item>
         <item name="findOnPageNextDrawable">@android:drawable/ic_find_next_holo_light</item>
         <item name="findOnPagePreviousDrawable">@android:drawable/ic_find_previous_holo_light</item>
+
+        <item name="drawer_background">@android:drawable/drawer_background_holo_light</item>
+        <item name="drawer_shadow">@android:drawable/drawer_shadow_holo_light</item>
+        <item name="ic_drawer">@android:drawable/ic_drawer_holo_light</item>
 
         <!-- Gallery attributes -->
         <item name="galleryItemBackground">@android:drawable/gallery_item_background</item>
@@ -1836,13 +1821,6 @@ please see themes_device_defaults.xml.
          For applications targeting Honeycomb or newer, this is the default
          AlertDialog theme. -->
     <style name="Theme.Holo.Light.Dialog.Alert">
-        <item name="windowBackground">@android:color/transparent</item>
-        <item name="windowTitleStyle">@android:style/DialogWindowTitle.Holo.Light</item>
-        <item name="windowContentOverlay">@null</item>
-        <item name="android:windowMinWidthMajor">@android:dimen/dialog_min_width_major</item>
-        <item name="android:windowMinWidthMinor">@android:dimen/dialog_min_width_minor</item>
-    </style>
-    <style name="Theme.Holo.Light.Dialog.Alert.ActPic">
         <item name="windowBackground">@android:color/transparent</item>
         <item name="windowTitleStyle">@android:style/DialogWindowTitle.Holo.Light</item>
         <item name="windowContentOverlay">@null</item>

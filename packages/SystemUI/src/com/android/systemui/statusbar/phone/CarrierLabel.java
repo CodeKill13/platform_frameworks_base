@@ -17,11 +17,9 @@
 package com.android.systemui.statusbar.phone;
 
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Slog;
@@ -36,6 +34,10 @@ import java.util.TimeZone;
 
 import com.android.internal.R;
 
+/**
+ * This widget display an analogic clock with two hands for hours and
+ * minutes.
+ */
 public class CarrierLabel extends TextView {
     private boolean mAttached;
 
@@ -60,7 +62,6 @@ public class CarrierLabel extends TextView {
             mAttached = true;
             IntentFilter filter = new IntentFilter();
             filter.addAction(TelephonyIntents.SPN_STRINGS_UPDATED_ACTION);
-            filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
             getContext().registerReceiver(mIntentReceiver, filter, null, getHandler());
         }
     }
@@ -83,16 +84,9 @@ public class CarrierLabel extends TextView {
                         intent.getStringExtra(TelephonyIntents.EXTRA_SPN),
                         intent.getBooleanExtra(TelephonyIntents.EXTRA_SHOW_PLMN, false),
                         intent.getStringExtra(TelephonyIntents.EXTRA_PLMN));
-            } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
-                updateNetworkName(false, null, false, null);
             }
         }
     };
-
-    private final boolean isAirPlaneModeOn() {
-        ContentResolver resolver = mContext.getContentResolver();
-        return Settings.System.getInt(resolver, Settings.System.AIRPLANE_MODE_ON, 0) == 1;
-    }
 
     void updateNetworkName(boolean showSpn, String spn, boolean showPlmn, String plmn) {
         if (false) {
@@ -100,11 +94,6 @@ public class CarrierLabel extends TextView {
                     + " showPlmn=" + showPlmn + " plmn=" + plmn);
         }
         final String str;
-        if (isAirPlaneModeOn()) {
-            showSpn = false;
-            showPlmn = true;
-            plmn = mContext.getText(R.string.global_actions_airplane_mode_on_status).toString();
-        }
         // match logic in KeyguardStatusViewManager
         final boolean plmnValid = showPlmn && !TextUtils.isEmpty(plmn);
         final boolean spnValid = showSpn && !TextUtils.isEmpty(spn);
@@ -120,4 +109,7 @@ public class CarrierLabel extends TextView {
         setText(str);
     }
 
+
 }
+
+

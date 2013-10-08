@@ -43,7 +43,7 @@ import android.util.EventLog;
 import android.util.Log;
 import android.util.Slog;
 import android.util.TimeUtils;
-import android.view.ContextThemeWrapper;
+import android.view.ContextThemeWrapper; 
 import android.view.IApplicationToken;
 import android.view.WindowManager;
 
@@ -131,7 +131,7 @@ final class ActivityRecord {
 
     boolean topIntent;
     boolean newTask;
-    boolean floatingWindow;
+    boolean floatingWindow; 
 
     String stringName;      // for caching of toString().
     
@@ -396,7 +396,6 @@ final class ActivityRecord {
                 labelRes = app.labelRes;
             }
             icon = aInfo.getIconResource();
-
             theme = aInfo.getThemeResource();
             realTheme = theme;
             if (realTheme == 0) {
@@ -405,8 +404,7 @@ final class ActivityRecord {
                         ? android.R.style.Theme
                         : android.R.style.Theme_Holo;
             }
-
-            // This is where the package gets its first context from the attribute-cache
+	    // This is where the package gets its first context from the attribute-cache
             // In order to hook its attributes we set up our check for floating mutil windows here.
             topIntent = true;
 
@@ -437,7 +435,6 @@ final class ActivityRecord {
             if (floatingWindow) {
                 intent.setFlags(intent.getFlags() & ~Intent.FLAG_ACTIVITY_TASK_ON_HOME);
                 intent.setFlags(intent.getFlags() & ~Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                intent.setFlags(intent.getFlags() & ~Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 
@@ -471,7 +468,7 @@ final class ActivityRecord {
             
             packageName = aInfo.applicationInfo.packageName;
             launchMode = aInfo.launchMode;
-
+            
             AttributeCache.Entry ent = AttributeCache.instance().get(packageName,
                     realTheme, com.android.internal.R.styleable.Window, userId);
             fullscreen = ent != null && !ent.array.getBoolean(

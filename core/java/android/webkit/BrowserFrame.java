@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2011, 2012 Code Aurora Forum. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +33,7 @@ import android.net.http.SslCertificate;
 import android.net.http.SslError;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Surface;
@@ -70,7 +72,6 @@ class BrowserFrame extends Handler {
      * request's LoadListener
      */
     private final static int MAX_OUTSTANDING_REQUESTS = 300;
-    private final static String SCHEME_HOST_DELIMITER = "://";
 
     private final CallbackProxy mCallbackProxy;
     private final WebSettingsClassic mSettings;
@@ -222,11 +223,13 @@ class BrowserFrame extends Handler {
             // set WebCore native cache size
             ActivityManager am = (ActivityManager) context
                     .getSystemService(Context.ACTIVITY_SERVICE);
-            if (am.getMemoryClass() > 16) {
-                sJavaBridge.setCacheSize(8 * 1024 * 1024);
-            } else {
-                sJavaBridge.setCacheSize(4 * 1024 * 1024);
-            }
+			int defCacheSize = am.getMemoryClass() > 16 ?
+                8 * 1024 * 1024 : 4 * 1024 * 1024;
+            int cacheSize = SystemProperties.getInt("net.webkit.cache.size", defCacheSize);
+            if ((cacheSize < 0) || (cacheSize > (100 * 1024 * 1024))) {
+                cacheSize = defCacheSize;
+             }
+             sJavaBridge.setCacheSize(cacheSize);
             // create CookieSyncManager with current Context
             CookieSyncManager.createInstance(appContext);
             // create PluginManager with current Context
@@ -499,15 +502,10 @@ class BrowserFrame extends Handler {
                             .getCurrentItem();
                     if (item != null) {
                         WebAddress uri = new WebAddress(item.getUrl());
-                        String schemePlusHost = uri.getScheme() + SCHEME_HOST_DELIMITER +
-                                uri.getHost();
+                        String schemePlusHost = uri.getScheme() + uri.getHost();
                         String[] up =
                                 WebViewDatabaseClassic.getInstance(mContext)
                                         .getUsernamePassword(schemePlusHost);
-                        if (up == null) { // no row found, try again using the legacy method
-                            schemePlusHost = uri.getScheme() + uri.getHost();
-                            up = mDatabase.getUsernamePassword(schemePlusHost);
-                        }
                         if (up != null && up[0] != null) {
                             setUsernamePassword(up[0], up[1]);
                         }
@@ -825,7 +823,7 @@ class BrowserFrame extends Handler {
             }
             WebAddress uri = new WebAddress(mCallbackProxy
                     .getBackForwardList().getCurrentItem().getUrl());
-            String schemePlusHost = uri.getScheme() + SCHEME_HOST_DELIMITER + uri.getHost();
+            String schemePlusHost = uri.getScheme() + uri.getHost();
             // Check to see if the username & password appear in
             // the post data (there could be another form on the
             // page and that was posted instead.
@@ -1104,16 +1102,12 @@ class BrowserFrame extends Handler {
         }
 
         SslErrorHandler handler = new SslErrorHandler() {
-            boolean isCanceled = false;
             @Override
             public void proceed() {
                 SslCertLookupTable.getInstance().setIsAllowed(sslError);
                 post(new Runnable() {
                         public void run() {
-                            if (!isCanceled)
-                            {
-                               nativeSslCertErrorProceed(handle);
-                            } 
+                            nativeSslCertErrorProceed(handle);
                         }
                     });
             }
@@ -1121,11 +1115,7 @@ class BrowserFrame extends Handler {
             public void cancel() {
                 post(new Runnable() {
                         public void run() {
-                            if (!isCanceled)
-                            {
-                               nativeSslCertErrorCancel(handle, certError);
-                            }
-                            isCanceled = true;
+                            nativeSslCertErrorCancel(handle, certError);
                         }
                     });
             }

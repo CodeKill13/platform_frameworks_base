@@ -803,7 +803,7 @@ class ZygoteConnection {
     }
 
     /**
-     * Applies zygote security policy for SELinux information.
+     * Applies zygote security policy for SEAndroid information.
      *
      * @param args non-null; zygote spawner arguments
      * @param peer non-null; peer credentials
@@ -822,7 +822,7 @@ class ZygoteConnection {
         if (!(peerUid == 0 || peerUid == Process.SYSTEM_UID)) {
             // All peers with UID other than root or SYSTEM_UID
             throw new ZygoteSecurityException(
-                    "This UID may not specify SELinux info.");
+                    "This UID may not specify SEAndroid info.");
         }
 
         boolean allowed = SELinux.checkSELinuxAccess(peerSecurityContext,
@@ -831,7 +831,7 @@ class ZygoteConnection {
                                                      "specifyseinfo");
         if (!allowed) {
             throw new ZygoteSecurityException(
-                    "Peer may not specify SELinux info");
+                    "Peer may not specify SEAndroid info");
         }
 
         return;
@@ -967,18 +967,16 @@ class ZygoteConnection {
 
         boolean usingWrapper = false;
         if (pipeFd != null && pid > 0) {
-            DataInputStream is = null;
+            DataInputStream is = new DataInputStream(new FileInputStream(pipeFd));
             int innerPid = -1;
             try {
-                is = new DataInputStream(new FileInputStream(pipeFd));
                 innerPid = is.readInt();
             } catch (IOException ex) {
                 Log.w(TAG, "Error reading pid from wrapped process, child may have died", ex);
             } finally {
-                if (is != null) {
-                    try {
-                        is.close();
-                    } catch (IOException ex) {}
+                try {
+                    is.close();
+                } catch (IOException ex) {
                 }
             }
 

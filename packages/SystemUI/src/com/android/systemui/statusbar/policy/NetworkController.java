@@ -17,10 +17,12 @@
 package com.android.systemui.statusbar.policy;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.database.ContentObserver;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiConfiguration;
@@ -90,6 +92,7 @@ public class NetworkController extends BroadcastReceiver {
     boolean mShowPhoneRSSIForData = false;
     boolean mShowAtLeastThreeGees = false;
     boolean mAlwaysShowCdmaRssi = false;
+    boolean mShow4GforLTE = false;
 
     String mContentDescriptionPhoneSignal;
     String mContentDescriptionWifi;
@@ -136,6 +139,9 @@ public class NetworkController extends BroadcastReceiver {
 
     private Locale mLocale = null;
     private Locale mLastLocale = null;
+    private boolean mHideSignal;
+    private boolean mUseAltSignal;
+    private boolean mShow4gForLte;
 
     // our ui
     Context mContext;
@@ -199,6 +205,7 @@ public class NetworkController extends BroadcastReceiver {
 
         mShowPhoneRSSIForData = res.getBoolean(R.bool.config_showPhoneRSSIForData);
         mShowAtLeastThreeGees = res.getBoolean(R.bool.config_showMin3G);
+        mShow4GforLTE = res.getBoolean(R.bool.config_show4GForLTE);
         mAlwaysShowCdmaRssi = res.getBoolean(
                 com.android.internal.R.bool.config_alwaysUseCdmaRssi);
 
@@ -232,6 +239,7 @@ public class NetworkController extends BroadcastReceiver {
 
         // broadcasts
         IntentFilter filter = new IntentFilter();
+        filter.addAction("com.aokp.romcontrol.LABEL_CHANGED");
         filter.addAction("com.android.settings.LABEL_CHANGED");
         filter.addAction(WifiManager.RSSI_CHANGED_ACTION);
         filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
@@ -258,6 +266,9 @@ public class NetworkController extends BroadcastReceiver {
         mBatteryStats = BatteryStatsService.getService();
 
         mLastLocale = mContext.getResources().getConfiguration().locale;
+
+        SettingsObserver settingsObserver = new SettingsObserver(new Handler());
+        settingsObserver.observe();
     }
 
     public boolean hasMobileDataFeature() {
@@ -355,7 +366,7 @@ public class NetworkController extends BroadcastReceiver {
         cluster.setIsAirplaneMode(mAirplaneMode, mAirplaneIconId);
     }
 
-    void notifySignalsChangedCallbacks(NetworkSignalChangedCallback cb) {
+   public void notifySignalsChangedCallbacks(NetworkSignalChangedCallback cb) {
         // only show wifi in the cluster if connected or if wifi-only
         boolean wifiEnabled = mWifiEnabled && (mWifiConnected || !mHasMobileDataFeature);
         String wifiDesc = wifiEnabled ?
@@ -408,8 +419,8 @@ public class NetworkController extends BroadcastReceiver {
                  action.equals(ConnectivityManager.INET_CONDITION_ACTION)) {
             updateConnectivity(intent);
             refreshViews();
-        } else if (action.equals("com.android.settings.LABEL_CHANGED")) {
-            refreshViews(); 
+        } else if (action.equals("com.aokp.romcontrol.LABEL_CHANGED")) {
+            refreshViews();
         } else if (action.equals(Intent.ACTION_CONFIGURATION_CHANGED)) {
             refreshLocale();
             refreshViews();
@@ -417,6 +428,8 @@ public class NetworkController extends BroadcastReceiver {
             refreshLocale();
             updateAirplaneMode();
             refreshViews();
+        } else if (action.equals("com.android.settings.LABEL_CHANGED")) {
+        	refreshViews();
         } else if (action.equals(WimaxManagerConstants.NET_4G_STATE_CHANGED_ACTION) ||
                 action.equals(WimaxManagerConstants.SIGNAL_LEVEL_CHANGED_ACTION) ||
                 action.equals(WimaxManagerConstants.WIMAX_NETWORK_STATE_CHANGED_ACTION)) {
@@ -543,15 +556,15 @@ public class NetworkController extends BroadcastReceiver {
     private final void updateTelephonySignalStrength() {
         if (!hasService()) {
             if (CHATTY) Slog.d(TAG, "updateTelephonySignalStrength: !hasService()");
-            mPhoneSignalIconId = R.drawable.stat_sys_signal_null;
+            mPhoneSignalIconId = (mHideSignal ? 0 : R.drawable.stat_sys_signal_null);
             mQSPhoneSignalIconId = R.drawable.ic_qs_signal_no_signal;
-            mDataSignalIconId = R.drawable.stat_sys_signal_null;
+            mDataSignalIconId = (mHideSignal ? 0 : R.drawable.stat_sys_signal_null);
         } else {
             if (mSignalStrength == null) {
                 if (CHATTY) Slog.d(TAG, "updateTelephonySignalStrength: mSignalStrength == null");
-                mPhoneSignalIconId = R.drawable.stat_sys_signal_null;
+                mPhoneSignalIconId = (mHideSignal ? 0 : R.drawable.stat_sys_signal_null);
                 mQSPhoneSignalIconId = R.drawable.ic_qs_signal_no_signal;
-                mDataSignalIconId = R.drawable.stat_sys_signal_null;
+                mDataSignalIconId = (mHideSignal ? 0 : R.drawable.stat_sys_signal_null);
                 mContentDescriptionPhoneSignal = mContext.getString(
                         AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[0]);
             } else {
@@ -580,12 +593,12 @@ public class NetworkController extends BroadcastReceiver {
                         iconList = TelephonyIcons.TELEPHONY_SIGNAL_STRENGTH[mInetCondition];
                     }
                 }
-                mPhoneSignalIconId = iconList[iconLevel];
+                mPhoneSignalIconId = (mHideSignal ? 0 : iconList[iconLevel]);
                 mQSPhoneSignalIconId =
                         TelephonyIcons.QS_TELEPHONY_SIGNAL_STRENGTH[mInetCondition][iconLevel];
                 mContentDescriptionPhoneSignal = mContext.getString(
                         AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[iconLevel]);
-                mDataSignalIconId = TelephonyIcons.DATA_SIGNAL_STRENGTH[mInetCondition][iconLevel];
+                mDataSignalIconId = (mHideSignal ? 0 : TelephonyIcons.DATA_SIGNAL_STRENGTH[mInetCondition][iconLevel]);
             }
         }
     }
@@ -692,8 +705,7 @@ public class NetworkController extends BroadcastReceiver {
                             R.string.accessibility_data_connection_3g);
                     break;
                 case TelephonyManager.NETWORK_TYPE_LTE:
-                    boolean show4GforLTE = mContext.getResources().getBoolean(R.bool.config_show4GForLTE);
-                    if (show4GforLTE) {
+                    if (mShow4GforLTE) {
                         mDataIconList = TelephonyIcons.DATA_4G[mInetCondition];
                         mDataTypeIconId = R.drawable.stat_sys_data_connected_4g;
                         mQSDataTypeIconId = R.drawable.ic_qs_signal_4g;
@@ -890,7 +902,7 @@ public class NetworkController extends BroadcastReceiver {
                     info = mWifiManager.getConnectionInfo();
                 }
                 if (info != null) {
-                    mWifiSsid = huntForSsid(mWifiManager, info);
+                    mWifiSsid = huntForSsid(info);
                 } else {
                     mWifiSsid = null;
                 }
@@ -924,13 +936,13 @@ public class NetworkController extends BroadcastReceiver {
         }
     }
 
-    protected static String huntForSsid(WifiManager manager, WifiInfo info) {
+    private String huntForSsid(WifiInfo info) {
         String ssid = info.getSSID();
         if (ssid != null) {
             return ssid;
         }
         // OK, it's not in the connectionInfo; we have to go hunting for it
-        List<WifiConfiguration> networks = manager.getConfiguredNetworks();
+        List<WifiConfiguration> networks = mWifiManager.getConfiguredNetworks();
         for (WifiConfiguration net : networks) {
             if (net.networkId == info.getNetworkId()) {
                 return net.SSID;
@@ -1196,11 +1208,15 @@ public class NetworkController extends BroadcastReceiver {
                 mQSDataTypeIconId = R.drawable.ic_qs_signal_r;
             }
         }
-        
-        if (customLabel != null && customLabel.length() > 0) {  
-            combinedLabel = customLabel;  
-            mobileLabel = customLabel;  
-    }  
+
+        if (customLabel != null && customLabel.trim().length() > 0) {  
+            combinedLabel = customLabel;    
+            mobileLabel = customLabel;
+            if (Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.NOTIFICATION_SHOW_WIFI_SSID, 0) == 0) {
+                wifiLabel = customLabel;
+            }
+        }
 
         if (DEBUG) {
             Slog.d(TAG, "refreshViews connected={"
@@ -1546,6 +1562,44 @@ public class NetworkController extends BroadcastReceiver {
         } else {
             return "(null)";
         }
+    }
+
+    class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUSBAR_HIDE_SIGNAL_BARS), false,
+                    this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUSBAR_SIGNAL_CLUSTER_ALT), false,
+                    this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.STATUSBAR_SIGNAL_SHOW_4G_FOR_LTE),
+                    mContext.getResources().getBoolean(R.bool.config_show4GForLTE),
+                    this);
+            updateSettings();
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            updateSettings();
+        }
+    }
+
+    protected void updateSettings() {
+        boolean clustdefault = mContext.getResources().getBoolean(R.bool.statusbar_alt_signal_layout);
+        mHideSignal = (Settings.System.getBoolean(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_HIDE_SIGNAL_BARS,false));
+        mUseAltSignal = (Settings.System.getBoolean(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_SIGNAL_CLUSTER_ALT, clustdefault));
+        mShow4gForLte = (Settings.System.getBoolean(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_SIGNAL_SHOW_4G_FOR_LTE,
+                mContext.getResources().getBoolean(R.bool.config_show4GForLTE)));
+        updateTelephonySignalStrength();
     }
 
 }

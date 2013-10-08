@@ -20,9 +20,9 @@ package android.app;
 import com.android.internal.policy.PolicyManager;
 import com.android.internal.util.Preconditions;
 
+import android.bluetooth.BluetoothManager;
 import android.accounts.AccountManager;
 import android.accounts.IAccountManager;
-import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -74,7 +74,6 @@ import android.net.wifi.IWifiManager;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.IWifiP2pManager;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wimax.WimaxManagerConstants;
 import android.nfc.NfcManager;
 import android.os.Binder;
 import android.os.Bundle;
@@ -86,8 +85,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.IPowerManager;
 import android.os.IUserManager;
-import android.hardware.IIrdaManager;
-import android.hardware.IrdaManager;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
@@ -536,6 +533,12 @@ class ContextImpl extends Context {
                 IUserManager service = IUserManager.Stub.asInterface(b);
                 return new UserManager(ctx, service);
             }});
+            
+        registerService(PROFILE_SERVICE, new ServiceFetcher() {
+            public Object createService(ContextImpl ctx) {
+                    final Context outerContext = ctx.getOuterContext();
+                    return new ProfileManager (outerContext, ctx.mMainThread.getHandler());
+                }});
 
         registerService(APP_OPS_SERVICE, new ServiceFetcher() {
             public Object createService(ContextImpl ctx) {
@@ -543,14 +546,8 @@ class ContextImpl extends Context {
                 IAppOpsService service = IAppOpsService.Stub.asInterface(b);
                 return new AppOpsManager(ctx, service);
             }});
-
-        registerService(IRDA_SERVICE, new StaticServiceFetcher() {
-                public Object createStaticService() {
-                    IBinder b = ServiceManager.getService(IRDA_SERVICE);
-                    IIrdaManager service = IIrdaManager.Stub.asInterface(b);
-                    return new IrdaManager(service);
-                }});
-    }
+                    
+            }
 
     static ContextImpl getImpl(Context context) {
         Context nextContext;
@@ -1557,6 +1554,16 @@ class ContextImpl extends Context {
             return null;
         }
         return new DropBoxManager(service);
+    }
+
+    @Override
+    public boolean isPrivacyGuardEnabled() {
+        try {
+            return ActivityManagerNative.getDefault().isPrivacyGuardEnabledForProcess(Binder.getCallingPid());
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return false;
     }
 
     @Override

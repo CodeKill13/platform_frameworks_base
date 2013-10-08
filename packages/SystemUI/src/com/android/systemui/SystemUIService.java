@@ -20,7 +20,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 
 import android.app.Service;
-//import android.content.BroadcastReceiver;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -33,8 +33,6 @@ import android.util.Slog;
 import android.view.IWindowManager;
 import android.view.WindowManagerGlobal;
 import android.view.accessibility.AccessibilityManager;
-
-import android.widget.FrameLayout;
 
 public class SystemUIService extends Service {
     static final String TAG = "SystemUIService";

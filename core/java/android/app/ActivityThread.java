@@ -1827,8 +1827,7 @@ public final class ActivityThread {
         }
         PackageInfo pi = null;
         try {
-            pi = getPackageManager().getPackageInfo(theme.getThemePackageName(),
-                    0, UserHandle.myUserId());
+            pi = getPackageManager().getPackageInfo(theme.getThemePackageName(), 0, 0);
         } catch (RemoteException e) {
         }
         if (pi != null && pi.applicationInfo != null && pi.themeInfos != null) {
@@ -2438,12 +2437,7 @@ public final class ActivityThread {
                     throw e;
 
                 } catch (Exception e) {
-                    if (!mInstrumentation.onException(r.activity, e)) {
-                        throw new RuntimeException(
-                                "Unable to pause activity "
-                                + r.intent.getComponent().toShortString()
-                                + ": " + e.toString(), e);
-                    }
+                    // Unable to resume activity 
                 }
                 r.paused = true;
             }

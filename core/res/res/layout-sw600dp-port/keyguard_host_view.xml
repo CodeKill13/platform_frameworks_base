@@ -45,19 +45,6 @@
             android:id="@+id/app_widget_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginTop="@dimen/status_bar_height"
-            android:layout_marginBottom="@dimen/status_bar_height" 
-            androidprv:layout_centerWithinArea="0.5"
-            androidprv:layout_childType="widget"
-            androidprv:layout_maxWidth="480dp"
-            androidprv:layout_maxHeight="480dp" />
-
-        <include layout="@layout/keyguard_widget_pager_carousel"
-            android:id="@+id/app_widget_container_carousel"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="@dimen/status_bar_height"
-            android:layout_marginBottom="@dimen/status_bar_height" 
             androidprv:layout_centerWithinArea="0.5"
             androidprv:layout_childType="widget"
             androidprv:layout_maxWidth="480dp"
@@ -74,7 +61,6 @@
             android:id="@+id/keyguard_security_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingTop="25dp"
             androidprv:layout_centerWithinArea="0.5"
             androidprv:layout_childType="challenge"
             android:layout_gravity="center_horizontal|bottom">

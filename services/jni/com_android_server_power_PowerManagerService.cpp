@@ -204,13 +204,12 @@ static void nativeReboot(JNIEnv *env, jclass clazz, jstring reason) {
     jniThrowIOException(env, errno);
 }
 
-void nativeCpuBoost(JNIEnv *env, jobject clazz, jint duration) {
+static void nativeCpuBoost(JNIEnv *env, jobject clazz, jint duration) {
     // Tell the Power HAL to boost the CPU
     if (gPowerModule && gPowerModule->powerHint) {
         gPowerModule->powerHint(gPowerModule, POWER_HINT_CPU_BOOST, (void *) duration);
     }
 }
-
 
 // ----------------------------------------------------------------------------
 

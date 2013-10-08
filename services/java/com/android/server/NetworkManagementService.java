@@ -994,6 +994,7 @@ public class NetworkManagementService extends INetworkManagementService.Stub
                         com.android.internal.R.bool.config_wifiApStartInterface)) {
                 mConnector.execute("softap", "start", wlanIface);
             }
+//            wifiFirmwareReload(wlanIface, "AP");
             if (wifiConfig == null) {
                 mConnector.execute("softap", "set", wlanIface);
             } else {

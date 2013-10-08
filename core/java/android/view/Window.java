@@ -152,7 +152,7 @@ public abstract class Window {
     
     private boolean mDestroyed;
 
-    public boolean mIsFloatingWindow = false;
+    public boolean mIsFloatingWindow = false; 
 
     // The current window attributes.
     private final WindowManager.LayoutParams mWindowAttributes =

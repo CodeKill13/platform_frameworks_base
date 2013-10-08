@@ -3690,7 +3690,6 @@ package android.app {
 
   public abstract class IntentService extends android.app.Service {
     ctor public IntentService(java.lang.String);
-    ctor public IntentService(java.lang.String, int);
     method public android.os.IBinder onBind(android.content.Intent);
     method protected abstract void onHandleIntent(android.content.Intent);
     method public void setIntentRedelivery(boolean);
@@ -6632,6 +6631,7 @@ package android.content.pm {
     field public static final int CONFIG_SCREEN_SIZE = 1024; // 0x400
     field public static final int CONFIG_SMALLEST_SCREEN_SIZE = 2048; // 0x800
     field public static final int CONFIG_TOUCHSCREEN = 8; // 0x8
+    field public static final int CONFIG_UI_INVERTED_MODE = 768; // 0x300
     field public static final int CONFIG_UI_MODE = 512; // 0x200
     field public static final android.os.Parcelable.Creator CREATOR;
     field public static final int FLAG_ALLOW_TASK_REPARENTING = 64; // 0x40
@@ -7291,6 +7291,10 @@ package android.content.res {
     field public static final int TOUCHSCREEN_NOTOUCH = 1; // 0x1
     field public static final deprecated int TOUCHSCREEN_STYLUS = 2; // 0x2
     field public static final int TOUCHSCREEN_UNDEFINED = 0; // 0x0
+    field public static final int UI_INVERTED_MODE_UNDEFINED = 0; // 0x0
+    field public static final int UI_INVERTED_MODE_NORMAL = 1; // 0x1
+    field public static final int UI_INVERTED_MODE_YES = 2; // 0x2
+    field public static final int UI_INVERTED_MODE_NO = 3; // 0x3
     field public static final int UI_MODE_NIGHT_MASK = 48; // 0x30
     field public static final int UI_MODE_NIGHT_NO = 16; // 0x10
     field public static final int UI_MODE_NIGHT_UNDEFINED = 0; // 0x0
@@ -7318,6 +7322,7 @@ package android.content.res {
     field public int screenWidthDp;
     field public int smallestScreenWidthDp;
     field public int touchscreen;
+    field public int uiInvertedMode;
     field public int uiMode;
   }
 
@@ -20121,6 +20126,7 @@ package android.provider {
     field public static final java.lang.String SETUP_WIZARD_HAS_RUN = "setup_wizard_has_run";
     field public static final java.lang.String SHOW_GTALK_SERVICE_STATUS = "SHOW_GTALK_SERVICE_STATUS";
     field public static final deprecated java.lang.String SHOW_PROCESSES = "show_processes";
+    field public static final java.lang.String SHOW_STATUSBAR_IME_SWITCHER = "show_statusbar_ime_switcher";
     field public static final deprecated java.lang.String SHOW_WEB_SUGGESTIONS = "show_web_suggestions";
     field public static final java.lang.String SOUND_EFFECTS_ENABLED = "sound_effects_enabled";
     field public static final deprecated java.lang.String STAY_ON_WHILE_PLUGGED_IN = "stay_on_while_plugged_in";

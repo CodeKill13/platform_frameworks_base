@@ -540,7 +540,7 @@ public class MediaScanner
                     if (noMedia) {
                         result = endFile(entry, false, false, false, false, false);
                     } else {
-                        String lowpath = path.toLowerCase();
+                        String lowpath = path.toLowerCase(Locale.ROOT);
                         boolean ringtones = (lowpath.indexOf(RINGTONES_DIR) > 0);
                         boolean notifications = (lowpath.indexOf(NOTIFICATIONS_DIR) > 0);
                         boolean alarms = (lowpath.indexOf(ALARMS_DIR) > 0);
@@ -1411,7 +1411,7 @@ public class MediaScanner
         int offset = 1;
         while (offset >= 0) {
             int slashIndex = path.indexOf('/', offset);
-            if (slashIndex >= offset) {
+            if (slashIndex > offset) {
                 slashIndex++; // move past slash
                 File file = new File(path.substring(0, slashIndex) + ".nomedia");
                 if (file.exists()) {

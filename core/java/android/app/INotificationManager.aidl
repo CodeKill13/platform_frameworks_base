@@ -54,5 +54,5 @@ interface INotificationManager
     void setHaloBlacklistStatus(String pkg, boolean status);
     void setHaloWhitelistStatus(String pkg, boolean status);
     boolean isHaloPolicyBlack();
-    boolean isPackageAllowedForHalo(String pkg);
+    boolean isPackageAllowedForHalo(String pkg);    
 }

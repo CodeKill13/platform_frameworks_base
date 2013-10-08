@@ -27,4 +27,3 @@
     <item android:maxLevel="90" android:drawable="@drawable/stat_sys_battery_charge_min_anim85" />
     <item android:maxLevel="100" android:drawable="@drawable/stat_sys_battery_charge_min_anim100" />
 </level-list>
-

@@ -219,7 +219,7 @@ class ContentProviderRecord {
         sb.append(name.flattenToShortString());
         return shortStringName = sb.toString();
     }
-    
+
     protected void finalize() throws Throwable {
         try {
             synchronized (service) {

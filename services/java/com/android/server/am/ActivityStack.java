@@ -21,15 +21,14 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import com.android.internal.app.HeavyWeightSwitcherActivity;
 import com.android.internal.os.BatteryStatsImpl;
-import com.android.server.power.PowerManagerService;
 import com.android.server.am.ActivityManagerService.PendingActivityLaunch;
+import com.android.server.power.PowerManagerService;
 import com.android.server.wm.AppTransition;
 
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppGlobals;
-import android.app.AppOpsManager;
 import android.app.IActivityManager;
 import android.app.IThumbnailRetriever;
 import android.app.IApplicationThread;
@@ -61,16 +60,11 @@ import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemClock;
-import android.os.SystemProperties;
 import android.os.UserHandle;
-import android.provider.Settings;
-import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
 import android.util.Slog;
 import android.view.Display;
-
-import com.android.internal.app.ActivityTrigger;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -292,16 +286,16 @@ final class ActivityStack {
     boolean mDismissKeyguardOnNextActivity = false;
 
     /**
-     * Is the privacy guard currently enabled?
-     */
-    String mPrivacyGuardPackageName = null;
-
-    /**
      * Save the most recent screenshot for reuse. This keeps Recents from taking two identical
      * screenshots, one for the Recents thumbnail and one for the pauseActivity thumbnail.
      */
     private ActivityRecord mLastScreenshotActivity = null;
     private Bitmap mLastScreenshotBitmap = null;
+
+    /**
+     * Is the privacy guard currently enabled?
+     */
+    String mPrivacyGuardPackageName = null;
 
     int mThumbnailWidth = -1;
     int mThumbnailHeight = -1;
@@ -331,17 +325,8 @@ final class ActivityStack {
     }
 
     private final PowerManagerService mPm;
+
     final Handler mHandler;
-
-    private static final ActivityTrigger mActivityTrigger;
-
-    static {
-        if (SystemProperties.QCOM_HARDWARE) {
-            mActivityTrigger = new ActivityTrigger();
-        } else {
-            mActivityTrigger = null;
-        }
-    }
 
     final class ActivityStackHandler extends Handler {
         //public Handler() {
@@ -368,19 +353,11 @@ final class ActivityStack {
                     // We don't at this point know if the activity is fullscreen,
                     // so we need to be conservative and assume it isn't.
                     Slog.w(TAG, "Activity pause timeout for " + r);
-                    int pid = -1;
-                    long pauseTime = 0;
-                    String m = null;
-                    //no need to synchronize this on mService
-                    if (r.app != null) {
-                       pid = r.app.pid;
-                    }
-                    pauseTime = r.pauseTime;
-                    m = "pausing " + r;
-    
-                    //would need to synchronize this on mService, if logAppTooSlow wasn't an if(true) return;
-                    if (pid > 0) {
-                        mService.logAppTooSlow(pid, pauseTime, m);
+                    synchronized (mService) {
+                        if (r.app != null) {
+                            mService.logAppTooSlow(r.app, r.pauseTime,
+                                    "pausing " + r);
+                        }
                     }
 
                     activityPaused(r != null ? r.appToken : null, true);
@@ -388,9 +365,9 @@ final class ActivityStack {
                 case IDLE_TIMEOUT_MSG: {
                     if (mService.mDidDexOpt) {
                         mService.mDidDexOpt = false;
-                        Message nmsg = obtainMessage(IDLE_TIMEOUT_MSG);
+                        Message nmsg = mHandler.obtainMessage(IDLE_TIMEOUT_MSG);
                         nmsg.obj = msg.obj;
-                        sendMessageDelayed(nmsg, IDLE_TIMEOUT);
+                        mHandler.sendMessageDelayed(nmsg, IDLE_TIMEOUT);
                         return;
                     }
                     // We don't at this point know if the activity is fullscreen,
@@ -401,20 +378,11 @@ final class ActivityStack {
                 } break;
                 case LAUNCH_TICK_MSG: {
                     ActivityRecord r = (ActivityRecord)msg.obj;
-                    int pid = -1;
-                    long launchTickTime = 0;
-                    String m = null;
-                    //no need to synchronize this on mService
-                    if (r.continueLaunchTickingLocked()) {
-                       if (r.app != null) {
-                            pid = r.app.pid;
+                    synchronized (mService) {
+                        if (r.continueLaunchTickingLocked()) {
+                            mService.logAppTooSlow(r.app, r.launchTickTime,
+                                    "launching " + r);
                         }
-                        launchTickTime = r.launchTickTime;
-                        m = "launching " + r;
-                    }
-                    //would need to synchronize this on mService, if logAppTooSlow wasn't an if(true) return;
-                    if (pid > 0) {
-                        mService.logAppTooSlow(pid, launchTickTime, m);
                     }
                 } break;
                 case DESTROY_TIMEOUT_MSG: {
@@ -431,7 +399,8 @@ final class ActivityStack {
                 case LAUNCH_TIMEOUT_MSG: {
                     if (mService.mDidDexOpt) {
                         mService.mDidDexOpt = false;
-                        sendEmptyMessageDelayed(LAUNCH_TIMEOUT_MSG, LAUNCH_TIMEOUT);
+                        Message nmsg = mHandler.obtainMessage(LAUNCH_TIMEOUT_MSG);
+                        mHandler.sendMessageDelayed(nmsg, LAUNCH_TIMEOUT);
                         return;
                     }
                     synchronized (mService) {
@@ -848,7 +817,7 @@ final class ActivityStack {
         // Is this activity's application already running?
         ProcessRecord app = mService.getProcessRecordLocked(r.processName,
                 r.info.applicationInfo.uid);
-        
+
         if (r.launchTime == 0) {
             r.launchTime = SystemClock.uptimeMillis();
             if (mInitialStartTime == 0) {
@@ -886,7 +855,8 @@ final class ActivityStack {
                 }
             }
             mHandler.removeMessages(SLEEP_TIMEOUT_MSG);
-            mHandler.sendEmptyMessageDelayed(SLEEP_TIMEOUT_MSG, SLEEP_TIMEOUT);
+            Message msg = mHandler.obtainMessage(SLEEP_TIMEOUT_MSG);
+            mHandler.sendMessageDelayed(msg, SLEEP_TIMEOUT);
             checkReadyForSleepLocked();
         }
     }
@@ -1049,7 +1019,8 @@ final class ActivityStack {
             mLaunchingActivity.acquire();
             if (!mHandler.hasMessages(LAUNCH_TIMEOUT_MSG)) {
                 // To be safe, don't allow the wake lock to be held for too long.
-                mHandler.sendEmptyMessageDelayed(LAUNCH_TIMEOUT_MSG, LAUNCH_TIMEOUT);
+                Message msg = mHandler.obtainMessage(LAUNCH_TIMEOUT_MSG);
+                mHandler.sendMessageDelayed(msg, LAUNCH_TIMEOUT);
             }
         }
 
@@ -1540,10 +1511,6 @@ final class ActivityStack {
 
         if (DEBUG_SWITCH) Slog.v(TAG, "Resuming " + next);
 
-        if (mActivityTrigger != null) {
-            mActivityTrigger.activityResumeTrigger(next.intent);
-        }
-
         // If we are currently pausing an activity, then don't do anything
         // until that is done.
         if (mPausingActivity != null) {
@@ -1583,7 +1550,7 @@ final class ActivityStack {
         
         // We need to start pausing the current activity so the top one
         // can be resumed...
-        if (mResumedActivity != null && (pauseActiveAppWhenUsingHalo() || !next.floatingWindow)) {
+        if (mResumedActivity != null && !next.floatingWindow) { 
             if (DEBUG_SWITCH) Slog.v(TAG, "Skip resume: need to start pausing");
             // At this point we want to put the upcoming activity's process
             // at the top of the LRU list, since we know we will be needing it
@@ -1662,7 +1629,7 @@ final class ActivityStack {
             if (prev.finishing) {
                 if (DEBUG_TRANSITION) Slog.v(TAG,
                         "Prepare close transition: prev=" + prev);
-                if (mNoAnimActivities.contains(prev) || next.floatingWindow) {
+                if (mNoAnimActivities.contains(prev) || next.floatingWindow) { 
                     mService.mWindowManager.prepareAppTransition(
                             AppTransition.TRANSIT_NONE, false);
                 } else {
@@ -1675,7 +1642,7 @@ final class ActivityStack {
             } else {
                 if (DEBUG_TRANSITION) Slog.v(TAG,
                         "Prepare open transition: prev=" + prev);
-                if (mNoAnimActivities.contains(next) || next.floatingWindow) {
+                if (mNoAnimActivities.contains(next) || next.floatingWindow) { 
                     noAnim = true;
                     mService.mWindowManager.prepareAppTransition(
                             AppTransition.TRANSIT_NONE, false);
@@ -1794,7 +1761,7 @@ final class ActivityStack {
                 next.app.pendingUiClean = true;
                 next.app.thread.scheduleResumeActivity(next.appToken,
                         mService.isNextTransitionForward());
-                
+
                 checkReadyForSleepLocked();
 
             } catch (Exception e) {
@@ -1807,7 +1774,7 @@ final class ActivityStack {
                 if (!next.hasBeenLaunched) {
                     next.hasBeenLaunched = true;
                 } else {
-                    if (SHOW_APP_STARTING_PREVIEW && mMainStack && !next.floatingWindow) {
+                    if (SHOW_APP_STARTING_PREVIEW && mMainStack && !next.floatingWindow) { 
                         mService.mWindowManager.setAppStartingWindow(
                                 next.appToken, next.packageName, next.theme,
                                 mService.compatibilityInfoForPackageLocked(
@@ -1841,7 +1808,7 @@ final class ActivityStack {
             if (!next.hasBeenLaunched) {
                 next.hasBeenLaunched = true;
             } else {
-                if (SHOW_APP_STARTING_PREVIEW && !next.floatingWindow) {
+                if (SHOW_APP_STARTING_PREVIEW && !next.floatingWindow) { 
                     mService.mWindowManager.setAppStartingWindow(
                             next.appToken, next.packageName, next.theme,
                             mService.compatibilityInfoForPackageLocked(
@@ -1864,8 +1831,14 @@ final class ActivityStack {
             return;
         }
 
-        boolean privacy = mService.mAppOpsService.getPrivacyGuardSettingForPackage(
-                next.app.uid, next.packageName);
+        boolean privacy = false;
+
+        try {
+            privacy = AppGlobals.getPackageManager().getPrivacyGuardSetting(
+                    next.packageName, next.userId);
+        } catch (RemoteException e) {
+            // nothing
+        }
 
         if (mPrivacyGuardPackageName != null && !privacy) {
             Message msg = mService.mHandler.obtainMessage(
@@ -1962,7 +1935,6 @@ final class ActivityStack {
             }
             if (DEBUG_TRANSITION) Slog.v(TAG,
                     "Prepare open transition: starting " + r);
-
             if (((r.intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION) != 0) || (r.floatingWindow && !r.topIntent)) {
                 mService.mWindowManager.prepareAppTransition(
                         AppTransition.TRANSIT_NONE, keepCurTransition);
@@ -1990,7 +1962,7 @@ final class ActivityStack {
                     doShow = topRunningNonDelayedActivityLocked(null) == r;
                 }
             }
-            if (SHOW_APP_STARTING_PREVIEW && doShow && !r.floatingWindow) {
+            if (SHOW_APP_STARTING_PREVIEW && doShow && !r.floatingWindow) { 
                 // Figure out if we are transitioning from another activity that is
                 // "has the same starting icon" as the next one.  This allows the
                 // window manager to keep the previous window it had previously
@@ -2580,9 +2552,6 @@ final class ActivityStack {
             final int userId = aInfo != null ? UserHandle.getUserId(aInfo.applicationInfo.uid) : 0;
             Slog.i(TAG, "START u" + userId + " {" + intent.toShortString(true, true, true, false)
                     + "} from pid " + (callerApp != null ? callerApp.pid : callingPid));
-            if (mActivityTrigger != null) {
-                mActivityTrigger.activityStartTrigger(intent);
-            }
         }
 
         ActivityRecord sourceRecord = null;
@@ -2820,7 +2789,8 @@ final class ActivityStack {
             launchFlags |= Intent.FLAG_ACTIVITY_NEW_TASK;
         }
 
-        if (r.resultTo != null && (launchFlags&Intent.FLAG_ACTIVITY_NEW_TASK) != 0) {
+        if (r.resultTo != null && (launchFlags&Intent.FLAG_ACTIVITY_NEW_TASK) != 0 &&
+                (launchFlags&Intent.FLAG_FLOATING_WINDOW) == 0) {
             // For whatever reason this activity is being launched into a new
             // task...  yet the caller has requested a result back.  Well, that
             // is pretty messed up, so instead immediately send back a cancel
@@ -3285,7 +3255,7 @@ final class ActivityStack {
             int res = startActivityLocked(caller, intent, resolvedType,
                     aInfo, resultTo, resultWho, requestCode, callingPid, callingUid,
                     callingPackage, startFlags, options, componentSpecified, null);
-
+            
             if (mConfigWillChange && mMainStack) {
                 // If the caller also wants to switch to a new configuration,
                 // do so now.  This allows a clean switch, as we are waiting
@@ -3311,7 +3281,6 @@ final class ActivityStack {
                         } catch (InterruptedException e) {
                         }
                     } while (!outResult.timeout && outResult.who == null);
-                    mWaitingActivityLaunched.remove(outResult);
                 } else if (res == ActivityManager.START_TASK_TO_FRONT) {
                     ActivityRecord r = this.topRunningActivityLocked(null);
                     if (r.nowVisible) {
@@ -3328,7 +3297,6 @@ final class ActivityStack {
                             } catch (InterruptedException e) {
                             }
                         } while (!outResult.timeout && outResult.who == null);
-                        mWaitingActivityVisible.remove(outResult);
                     }
                 }
             }
@@ -3336,7 +3304,7 @@ final class ActivityStack {
             return res;
         }
     }
-
+    
     final int startActivities(IApplicationThread caller, int callingUid, String callingPackage,
             Intent[] intents, String[] resolvedTypes, IBinder resultTo,
             Bundle options, int userId) {
@@ -3677,6 +3645,10 @@ final class ActivityStack {
                 mService.mCancelledThumbnails.clear();
             }
 
+        }
+
+        mService.mBootingCondition.block();
+        synchronized (mService) {
             if (mMainStack) {
                 booting = mService.mBooting;
                 mService.mBooting = false;
@@ -3701,7 +3673,7 @@ final class ActivityStack {
 
         // Stop any activities that are scheduled to do so but have been
         // waiting for the next one to start.
-       for (i=0; i<NS; i++) {
+        for (i=0; i<NS; i++) {
             ActivityRecord r = (ActivityRecord)stops.get(i);
             synchronized (mService) {
                 if (r.finishing) {
@@ -3712,12 +3684,11 @@ final class ActivityStack {
             }
         }
 
-
         // Finish any activities that are scheduled to do so but have been
         // waiting for the next one to start.
         for (i=0; i<NF; i++) {
+            ActivityRecord r = (ActivityRecord)finishes.get(i);
             synchronized (mService) {
-                ActivityRecord r = (ActivityRecord)finishes.get(i);
                 activityRemoved = destroyActivityLocked(r, true, false, "finish-idle");
             }
         }
@@ -3914,7 +3885,7 @@ final class ActivityStack {
             mService.mWindowManager.prepareAppTransition(endTask && !r.floatingWindow
                     ? AppTransition.TRANSIT_TASK_CLOSE
                     : AppTransition.TRANSIT_ACTIVITY_CLOSE, false);
-
+    
             // Tell window manager to prepare for this one to be removed.
             mService.mWindowManager.setAppVisibility(r.appToken, false);
                 
@@ -4417,7 +4388,7 @@ final class ActivityStack {
         if (top < 0 || (mHistory.get(top)).task.taskId == task) {
             // nothing to do!
             if (reason != null &&
-                    ((reason.intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION) != 0 || reason.floatingWindow)) {
+                    (reason.intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION) != 0) {
                 ActivityOptions.abort(options);
             } else {
                 updateTransitLocked(AppTransition.TRANSIT_TASK_TO_FRONT, options);
@@ -4871,13 +4842,7 @@ final class ActivityStack {
 
         return true;
     }
-
-    private boolean pauseActiveAppWhenUsingHalo() {
-        int isLowRAM = (ActivityManager.isLargeRAM()) ? 0 : 1;
-        return Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.HALO_PAUSE, isLowRAM) == 1;
-    }
-
+    
     public void dismissKeyguardOnNextActivityLocked() {
         mDismissKeyguardOnNextActivity = true;
     }

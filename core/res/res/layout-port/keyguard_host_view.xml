@@ -47,16 +47,9 @@
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginTop="@dimen/status_bar_height"
-            android:layout_marginBottom="@dimen/status_bar_height"
             androidprv:layout_childType="widgets">
             <include layout="@layout/keyguard_widget_pager"
                 android:id="@+id/app_widget_container"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"/>
-            <include layout="@layout/keyguard_widget_pager_carousel"
-                android:id="@+id/app_widget_container_carousel"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_gravity="center"/>
@@ -87,6 +80,7 @@
         </com.android.internal.policy.impl.keyguard.KeyguardSecurityContainer>
 
         <ImageButton
+              android:id="@+id/expand_challenge_handle"
               android:layout_width="match_parent"
               android:layout_height="@dimen/kg_widget_pager_bottom_padding"
               androidprv:layout_childType="expandChallengeHandle"
@@ -94,6 +88,7 @@
               android:background="@null"
               android:src="@drawable/keyguard_expand_challenge_handle"
               android:scaleType="center"
+              android:hapticFeedbackEnabled="true"
               android:contentDescription="@string/keyguard_accessibility_expand_lock_area" />
 
     </com.android.internal.policy.impl.keyguard.SlidingChallengeLayout>

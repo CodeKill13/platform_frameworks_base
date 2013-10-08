@@ -82,6 +82,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Iterator;
@@ -101,7 +102,7 @@ import java.util.regex.Pattern;
 public class WifiStateMachine extends StateMachine {
 
     private static final String NETWORKTYPE = "WIFI";
-    private static final boolean DBG = false;
+    private static final boolean DBG = true;
 
     private WifiMonitor mWifiMonitor;
     private WifiNative mWifiNative;
@@ -361,7 +362,7 @@ public class WifiStateMachine extends StateMachine {
     /* Get supported channels */
     public static final int CMD_GET_SUPPORTED_CHANNELS    = BASE + 135;
 
-    public static final int CMD_BOOT_COMPLETED            = BASE + 136;
+    public static final int CMD_BOOT_COMPLETED		   = BASE + 136;
 
     public static final int CONNECT_MODE                   = 1;
     public static final int SCAN_ONLY_MODE                 = 2;
@@ -1083,7 +1084,7 @@ public class WifiStateMachine extends StateMachine {
         int result = resultMsg.arg1;
         resultMsg.recycle();
         return result;
-    }
+    }    
 
     public List<WifiChannel> syncGetSupportedChannels(AsyncChannel channel) {
         Message resultMsg = channel.sendMessageSynchronously(CMD_GET_SUPPORTED_CHANNELS);
@@ -1315,7 +1316,6 @@ public class WifiStateMachine extends StateMachine {
                 Settings.Global.WIFI_COUNTRY_CODE);
         if (countryCode != null && !countryCode.isEmpty()) {
             setCountryCode(countryCode, false);
-            mCountryCode = countryCode;
         } else {
             // On wifi-only devices, some drivers don't find hidden SSIDs unless DRIVER COUNTRY
             // is called. Use the default country code to ping the driver.
@@ -1326,6 +1326,7 @@ public class WifiStateMachine extends StateMachine {
             }
 
             // In other case, mcc tables from carrier do the trick of starting up the wifi driver
+
         }
     }
 
@@ -1911,16 +1912,6 @@ public class WifiStateMachine extends StateMachine {
          */
         mWifiNative.disconnect();
         mWifiNative.reconnect();
-    }
-
-    private void handleStopDriverCmd() {
-        if (getCurrentState() != mDisconnectedState) {
-            mWifiNative.disconnect();
-            handleNetworkDisconnect();
-        }
-        mWakeLock.acquire();
-        mWifiNative.stopDriver();
-        mWakeLock.release();
     }
 
     /* Current design is to not set the config on a running hostapd but instead
@@ -2562,7 +2553,7 @@ public class WifiStateMachine extends StateMachine {
                     break;
                 case CMD_SET_COUNTRY_CODE:
                     String country = (String) message.obj;
-                    String countryCode = country != null ? country.toUpperCase() : null;
+                    String countryCode = country != null ? country.toUpperCase(Locale.ROOT) : null;
                     if (DBG) log("set country code " + countryCode);
                     if (mWifiNative.setCountryCode(countryCode)) {
                         mCountryCode = countryCode;
@@ -2625,7 +2616,13 @@ public class WifiStateMachine extends StateMachine {
                 case CMD_DELAYED_STOP_DRIVER:
                     if (DBG) log("delayed stop " + message.arg1 + " " + mDelayedStopCounter);
                     if (message.arg1 != mDelayedStopCounter) break;
-                    handleStopDriverCmd();
+                    if (getCurrentState() != mDisconnectedState) {
+                        mWifiNative.disconnect();
+                        handleNetworkDisconnect();
+                    }
+                    mWakeLock.acquire();
+                    mWifiNative.stopDriver();
+                    mWakeLock.release();
                     if (mP2pSupported) {
                         transitionTo(mWaitForP2pDisableState);
                     } else {
@@ -3290,15 +3287,6 @@ public class WifiStateMachine extends StateMachine {
                     sendNetworkStateChangeBroadcast(mLastBssid);
                     transitionTo(mConnectedState);
                     break;
-                case CMD_STOP_DRIVER:
-                    handleStopDriverCmd();
-                    if (mP2pSupported) {
-                        transitionTo(mWaitForP2pDisableState);
-                    } else {
-                        transitionTo(mDriverStoppingState);
-                    }
-                    break;
-
                 default:
                     return NOT_HANDLED;
             }

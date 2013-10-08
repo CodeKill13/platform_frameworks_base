@@ -25,9 +25,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.ContentObserver;
 import android.location.LocationManager;
-import android.os.Handler;
 import android.os.UserHandle;
 import android.provider.Settings;
 
@@ -47,8 +45,6 @@ public class LocationController extends BroadcastReceiver {
 
     private ArrayList<LocationGpsStateChangeCallback> mChangeCallbacks =
             new ArrayList<LocationGpsStateChangeCallback>();
-            
-    private ContentObserver mGpsSettingObserver;
 
     public interface LocationGpsStateChangeCallback {
         public void onLocationGpsStateChanged(boolean inUse, boolean hasFix, String description);
@@ -65,20 +61,6 @@ public class LocationController extends BroadcastReceiver {
         NotificationManager nm = (NotificationManager)context.getSystemService(
                 Context.NOTIFICATION_SERVICE);
         mNotificationService = nm.getService();
-        
-        mGpsSettingObserver = new ContentObserver(new Handler()) {
-            @Override
-            public void onChange(boolean selfChange) {
-                boolean visible = Settings.Secure.isLocationProviderEnabled(
-                        mContext.getContentResolver(), LocationManager.GPS_PROVIDER);
-                for (LocationGpsStateChangeCallback cb : mChangeCallbacks) {
-                    cb.onLocationGpsStateChanged(visible, false, null);
-                }
-            }
-        };
-        mContext.getContentResolver().registerContentObserver(
-                Settings.System.getUriFor(Settings.Secure.LOCATION_PROVIDERS_ALLOWED), false, mGpsSettingObserver);
-        
     }
 
     public void addStateChangedCallback(LocationGpsStateChangeCallback cb) {
@@ -111,7 +93,7 @@ public class LocationController extends BroadcastReceiver {
             visible = true;
             hasFix = false;
         }
-
+        
         try {
             if (visible) {
                 Intent gpsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
@@ -131,7 +113,7 @@ public class LocationController extends BroadcastReceiver {
                 // Notification.Builder will helpfully fill these out for you no matter what you do
                 n.tickerView = null;
                 n.tickerText = null;
-
+                
                 n.priority = Notification.PRIORITY_HIGH;
 
                 int[] idOut = new int[1];
@@ -160,4 +142,3 @@ public class LocationController extends BroadcastReceiver {
         }
     }
 }
-

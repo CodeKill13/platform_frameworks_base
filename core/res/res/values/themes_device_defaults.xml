@@ -204,6 +204,8 @@ easier.
     <style name="Theme.DeviceDefault.NoActionBar" parent="Theme.Holo.NoActionBar" >
     </style>
 
+    <!-- Variant of {@link #Theme_DeviceDefault} with no action bar and no status bar.  This theme
+         sets {@link android.R.attr#windowFullscreen} to true.  -->
     <style name="Theme.DeviceDefault.NoActionBar.Fullscreen" parent="Theme.Holo.NoActionBar.Fullscreen" >
     </style>
 
@@ -510,7 +512,7 @@ easier.
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowSoftInputMode">stateAlwaysHidden|adjustPan</item>
     </style>
-
+ 
     <style name="Theme.DeviceDefault.FloatingWindowLight" parent="Theme.Holo.Light.Dialog">
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowIsTranslucent">true</item>
@@ -521,7 +523,7 @@ easier.
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowSoftInputMode">stateAlwaysHidden|adjustPan</item>
-    </style>
+    </style> 
 
     <!-- DeviceDefault light theme for panel windows. This removes all extraneous window
     decorations, so you basically have an empty rectangle in which to place your content. It makes
@@ -565,9 +567,6 @@ easier.
         <item name="windowTitleStyle">@android:style/DialogWindowTitle.DeviceDefault</item>
     </style>
     <style name="Theme.DeviceDefault.Light.Dialog.Alert" parent="Theme.Holo.Light.Dialog.Alert">
-        <item name="windowTitleStyle">@android:style/DialogWindowTitle.DeviceDefault.Light</item>
-    </style>
-    <style name="Theme.DeviceDefault.Light.Dialog.Alert.ActPic" parent="Theme.Holo.Light.Dialog.Alert.ActPic">
         <item name="windowTitleStyle">@android:style/DialogWindowTitle.DeviceDefault.Light</item>
     </style>
     <style name="Theme.DeviceDefault.SearchBar" parent="Theme.Holo.SearchBar">

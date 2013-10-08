@@ -178,9 +178,6 @@ extern int register_android_animation_PropertyValuesHolder(JNIEnv *env);
 extern int register_com_android_internal_content_NativeLibraryHelper(JNIEnv *env);
 extern int register_com_android_internal_net_NetworkStatsFactory(JNIEnv *env);
 extern int register_android_content_res_PackageRedirectionMap(JNIEnv* env);
-#ifdef QCOM_HARDWARE
-extern int register_com_android_internal_app_ActivityTrigger(JNIEnv *env);
-#endif
 
 static AndroidRuntime* gCurRuntime = NULL;
 
@@ -372,6 +369,19 @@ static int hasDir(const char* dir)
         return S_ISDIR(s.st_mode);
     }
     return 0;
+}
+
+/*
+ * We just want failed write() calls to just return with an error.
+ */
+static void blockSigpipe()
+{
+    sigset_t mask;
+
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGPIPE);
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) != 0)
+        ALOGW("WARNING: SIGPIPE not blocked\n");
 }
 
 /*
@@ -795,6 +805,8 @@ void AndroidRuntime::start(const char* className, const char* options)
     ALOGD("\n>>>>>> AndroidRuntime START %s <<<<<<\n",
             className != NULL ? className : "(unknown)");
 
+    blockSigpipe();
+
     /*
      * 'startSystemServer == true' means runtime is obsolete and not run from
      * init.rc anymore, so we print out the boot start event here.
@@ -1204,11 +1216,6 @@ static const RegJNIRec gRegJNI[] = {
     REG_JNI(register_com_android_internal_content_NativeLibraryHelper),
     REG_JNI(register_com_android_internal_net_NetworkStatsFactory),
     REG_JNI(register_android_content_res_PackageRedirectionMap),
-
-#ifdef QCOM_HARDWARE
-    REG_JNI(register_com_android_internal_app_ActivityTrigger),
-#endif
-
 };
 
 /*

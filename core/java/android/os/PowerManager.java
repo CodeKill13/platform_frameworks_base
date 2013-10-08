@@ -335,34 +335,21 @@ public final class PowerManager {
     }
 
     /**
-     * Gets the minimum screen brightness.
-     * This is the lowest possible screen brightness; the screen will
-     * never become dimmer than that.
-     * @hide
-     */
-    public int getMinimumAbsoluteScreenBrightness() {
-        int minSetting = getMinimumScreenBrightnessSetting();
-        int dimSetting = mContext.getResources().getInteger(
-                com.android.internal.R.integer.config_screenBrightnessDim);
-        return Math.min(minSetting, dimSetting);
-    }
-
-    /**
      * Returns true if the screen auto-brightness adjustment setting should
-     * be available in the UI.
+     * be available in the UI.  This setting is experimental and disabled by default.
      * @hide
      */
     public static boolean useScreenAutoBrightnessAdjustmentFeature() {
-        return true;
+        return SystemProperties.getBoolean("persist.power.useautobrightadj", false);
     }
 
     /**
-     * Returns true if the twilight service should be used to adjust
-     * screen brightness policy.
+     * Returns true if the twilight service should be used to adjust screen brightness
+     * policy.  This setting is experimental and disabled by default.
      * @hide
      */
     public static boolean useTwilightAdjustmentFeature() {
-        return true;
+        return SystemProperties.getBoolean("persist.power.usetwilightadj", false);
     }
 
     /**
@@ -854,52 +841,5 @@ public final class PowerManager {
                     + " held=" + mHeld + ", refCount=" + mCount + "}";
             }
         }
-    }
-
-    /**
-     * @hide
-     */
-    public void setKeyboardVisibility(boolean visible)
-    {
-        try {
-            if (mService != null) {
-                mService.setKeyboardVisibility(visible);
-            }
-        } catch (RemoteException e) {
-        }
-    }
-
-    /**
-     * sets the keyboard LED state
-     *
-     * @param on boolean state
-     * @param key 1 for caps, 2 for fn
-     *
-     * {@hide}
-     */
-    public void setKeyboardLight(boolean on, int key)
-    {
-        try {
-            mService.setKeyboardLight(on, key);
-        } catch (RemoteException e) {
-        }
-    }
-
-    /**
-     * Gets the default button brightness value.
-     * @hide
-     */
-    public int getDefaultButtonBrightness() {
-        return mContext.getResources().getInteger(
-                com.android.internal.R.integer.config_buttonBrightnessSettingDefault);
-    }
-
-    /**
-     * Gets the default keyboard brightness value.
-     * @hide
-     */
-    public int getDefaultKeyboardBrightness() {
-        return mContext.getResources().getInteger(
-                com.android.internal.R.integer.config_keyboardBrightnessSettingDefault);
     }
 }

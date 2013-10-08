@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2012 ParanoidAndroid Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +20,6 @@ package com.android.internal.policy.impl.keyguard;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.appwidget.AppWidgetManager;
-import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -46,7 +46,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import com.android.internal.R;
-import com.android.internal.app.ThemeUtils;
 import com.android.internal.widget.LockPatternUtils;
 
 /**
@@ -73,7 +72,6 @@ public class KeyguardViewManager {
 
     private FrameLayout mKeyguardHost;
     private KeyguardHostView mKeyguardView;
-    private SettingsObserver mObserver;
 
     private boolean mScreenOn = false;
     private LockPatternUtils mLockPatternUtils;
@@ -81,7 +79,7 @@ public class KeyguardViewManager {
     public interface ShowListener {
         void onShown(IBinder windowToken);
     };
-    
+
     class SettingsObserver extends ContentObserver {
         SettingsObserver(Handler handler) {
             super(handler);
@@ -117,9 +115,9 @@ public class KeyguardViewManager {
         mViewManager = viewManager;
         mViewMediatorCallback = callback;
         mLockPatternUtils = lockPatternUtils;
-        
-        mObserver = new SettingsObserver(new Handler());
-        mObserver.observe();
+
+        SettingsObserver observer = new SettingsObserver(new Handler());
+        observer.observe();
     }
 
     /**
@@ -147,15 +145,14 @@ public class KeyguardViewManager {
         mKeyguardView.show();
         mKeyguardView.requestFocus();
     }
-    
-     public void setKeyguardParams() {
+
+    public void setKeyguardParams() {
         final boolean isActivity = (mContext instanceof Activity); // for test activity
         boolean allowSeeThrough = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.LOCKSCREEN_SEE_THROUGH, 0) != 0;
 
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
-                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN;
 
         if (!allowSeeThrough) {
@@ -163,6 +160,9 @@ public class KeyguardViewManager {
         }
         if (!mNeedsInput) {
             flags |= WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
+        }
+        if (ActivityManager.isHighEndGfx()) {
+            flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
         }
 
         final int stretch = ViewGroup.LayoutParams.MATCH_PARENT;
@@ -172,8 +172,11 @@ public class KeyguardViewManager {
                 stretch, stretch, type, flags, PixelFormat.TRANSLUCENT);
         lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
         lp.windowAnimations = com.android.internal.R.style.Animation_LockScreen;
-        lp.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_FORCE_HARDWARE_ACCELERATED;
+        if (ActivityManager.isHighEndGfx()) {
+            lp.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+            lp.privateFlags |=
+                    WindowManager.LayoutParams.PRIVATE_FLAG_FORCE_HARDWARE_ACCELERATED;
+        }
         lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_SET_NEEDS_MENU_KEY;
         if (isActivity) {
             lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_SHOW_FOR_ALL_USERS;
@@ -186,14 +189,16 @@ public class KeyguardViewManager {
     private boolean shouldEnableScreenRotation() {
         Resources res = mContext.getResources();
         return SystemProperties.getBoolean("lockscreen.rot_override",false)
-                || Settings.System.getBoolean(mContext.getContentResolver(),
-                Settings.System.LOCKSCREEN_ALLOW_ROTATION, mContext.getResources().getBoolean(
-                com.android.internal.R.bool.config_enableLockScreenRotation));
+                || Settings.System.getInt(
+                        mContext.getContentResolver(),
+                        Settings.System.LOCKSCREEN_AUTO_ROTATE,
+                        com.android.internal.R.bool.config_enableLockScreenRotation) == 1;
     }
 
     class ViewManagerHost extends FrameLayout {
         public ViewManagerHost(Context context) {
             super(context);
+            setFitsSystemWindows(true);
         }
 
         @Override
@@ -238,7 +243,6 @@ public class KeyguardViewManager {
 
     private void maybeCreateKeyguardLocked(boolean enableScreenRotation, boolean force,
             Bundle options) {
-
         if (mKeyguardHost != null) {
             mKeyguardHost.saveHierarchyState(mStateContainer);
         }
@@ -248,41 +252,8 @@ public class KeyguardViewManager {
 
             mKeyguardHost = new ViewManagerHost(mContext);
 
-            int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                    | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
-                    | WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN
-                    | WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER;
-
-            if (!mNeedsInput) {
-                flags |= WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
-            }
-            if (ActivityManager.isHighEndGfx()) {
-                flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-            }
-            final boolean isActivity = (mContext instanceof Activity);
-            final int stretch = ViewGroup.LayoutParams.MATCH_PARENT;
-            final int type = isActivity ? WindowManager.LayoutParams.TYPE_APPLICATION
-                    : WindowManager.LayoutParams.TYPE_KEYGUARD;
-            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                    stretch, stretch, type, flags, PixelFormat.TRANSLUCENT);
-            lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
-            lp.windowAnimations = com.android.internal.R.style.Animation_LockScreen;
-            lp.screenOrientation = enableScreenRotation ?
-                    ActivityInfo.SCREEN_ORIENTATION_USER : ActivityInfo.SCREEN_ORIENTATION_NOSENSOR;
-
-            if (ActivityManager.isHighEndGfx()) {
-                lp.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-                lp.privateFlags |=
-                        WindowManager.LayoutParams.PRIVATE_FLAG_FORCE_HARDWARE_ACCELERATED;
-            }
-            lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_SET_NEEDS_MENU_KEY;
-            if (isActivity) {
-                lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_SHOW_FOR_ALL_USERS;
-            }
-            lp.inputFeatures |= WindowManager.LayoutParams.INPUT_FEATURE_DISABLE_USER_ACTIVITY;
-            lp.setTitle(isActivity ? "KeyguardMock" : "Keyguard");
-            mWindowLayoutParams = lp;
-            mViewManager.addView(mKeyguardHost, lp);
+            setKeyguardParams();
+            mViewManager.addView(mKeyguardHost, mWindowLayoutParams);
         }
 
         if (force || mKeyguardView == null) {

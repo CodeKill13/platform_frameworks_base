@@ -1,4 +1,5 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
+// Copyright 2012 ParanoidAndroid Project
 
 package com.android.server.wm;
 
@@ -256,14 +257,14 @@ public class WindowAnimator {
                         mService.mFocusMayChange = true;
                     }
                     if (win.isReadyForDisplay()) {
-                       if(Settings.System.getInt(mContext.getContentResolver(),
+                        if(Settings.System.getInt(mContext.getContentResolver(),
                                 Settings.System.LOCKSCREEN_SEE_THROUGH, 0) == 0) {
                             if (nowAnimating) {
                                 if (winAnimator.mAnimationIsEntrance) {
                                     mForceHiding = KEYGUARD_ANIMATING_IN;
                                 } else {
                                     mForceHiding = KEYGUARD_ANIMATING_OUT;
-                                }                       
+                                }
                             } else {
                                 mForceHiding = KEYGUARD_SHOWN;
                             }
@@ -655,9 +656,10 @@ public class WindowAnimator {
 
         if (mAnimating) {
             mService.scheduleAnimationLocked();
-        } else if (wasAnimating) {
-            mPolicy.windowAnimationFinished();
-            mService.requestTraversalLocked();
+        } else {
+	    if (wasAnimating) {
+                mService.requestTraversalLocked();
+            } 
         }
         if (WindowManagerService.DEBUG_WINDOW_TRACE) {
             Slog.i(TAG, "!!! animate: exit mAnimating=" + mAnimating

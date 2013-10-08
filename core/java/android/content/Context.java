@@ -1769,9 +1769,6 @@ public abstract class Context {
      *  <dt> {@link #ALARM_SERVICE} ("alarm")
      *  <dd> A {@link android.app.AlarmManager} for receiving intents at the
      *  time of your choosing.
-     *  <dt> {@link #IRDA_SERVICE} ("irda")
-     *  <dd> A {@link android.hardware.IrdaManager} for sending IR codes
-     *  with the IR emitter
      *  <dt> {@link #NOTIFICATION_SERVICE} ("notification")
      *  <dd> A {@link android.app.NotificationManager} for informing the user
      *   of background events.
@@ -1819,8 +1816,6 @@ public abstract class Context {
      * @see android.os.PowerManager
      * @see #ALARM_SERVICE
      * @see android.app.AlarmManager
-     * @see #IRDA_SERVICE
-     * @see android.hardware.IrdaManager
      * @see #NOTIFICATION_SERVICE
      * @see android.app.NotificationManager
      * @see #KEYGUARD_SERVICE
@@ -1914,16 +1909,6 @@ public abstract class Context {
 
     /**
      * Use with {@link #getSystemService} to retrieve a
-     * {@link android.hardware.IrdaManager} for sending IR codes
-     * with the IR emitter
-     *
-     * @see #getSystemService
-     * @see android.hardware.IrdaManager
-     */
-    public static final String IRDA_SERVICE = "irda";
-
-    /**
-     * Use with {@link #getSystemService} to retrieve a
      * {@link android.app.NotificationManager} for informing the user of
      * background events.
      *
@@ -1931,6 +1916,18 @@ public abstract class Context {
      * @see android.app.NotificationManager
      */
     public static final String NOTIFICATION_SERVICE = "notification";
+
+/**
+     * Use with {@link #getSystemService} to retrieve a
+     * {@link android.app.ProfileManager} for setting
+     * notification profiles.
+     *
+     * @see #getSystemService
+     * @see android.app.ProfileManager
+     *
+     * @hide
+     */
+    public static final String PROFILE_SERVICE = "profile";
 
     /**
      * Use with {@link #getSystemService} to retrieve a
@@ -2297,6 +2294,16 @@ public abstract class Context {
      * @hide
      */
     public static final String APP_OPS_SERVICE = "appops";
+
+    /**
+     * Determine whether the application or calling application has
+     * privacy guard. This is a privacy feature intended to permit the user
+     * to control access to personal data. Applications and content providers
+     * can check this value if they wish to honor privacy guard.
+     *
+     * @hide
+     */
+    public abstract boolean isPrivacyGuardEnabled();
 
     /**
      * Determine whether the given permission is allowed for a particular

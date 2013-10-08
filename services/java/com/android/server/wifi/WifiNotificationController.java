@@ -38,6 +38,8 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.List;
 
+import com.android.server.wifi.WifiService;
+
 /* Takes care of handling the "open wi-fi network available" notification @hide */
 final class WifiNotificationController {
     /**
@@ -239,17 +241,19 @@ final class WifiNotificationController {
                         .getPendingIntent(0, 0, null, UserHandle.CURRENT);
             }
 
+
             CharSequence title = mContext.getResources().getQuantityText(
                     com.android.internal.R.plurals.wifi_available, numNetworks);
             CharSequence details = mContext.getResources().getQuantityText(
                     com.android.internal.R.plurals.wifi_available_detailed, numNetworks);
+
             mNotification.tickerText = title;
             mNotification.setLatestEventInfo(mContext, title, details, mNotification.contentIntent);
-
             mNotificationRepeatTime = System.currentTimeMillis() + NOTIFICATION_REPEAT_DELAY_MS;
 
             notificationManager.notifyAsUser(null, ICON_NETWORKS_AVAILABLE, mNotification,
                     UserHandle.ALL);
+
         } else {
             notificationManager.cancelAsUser(null, ICON_NETWORKS_AVAILABLE, UserHandle.ALL);
         }
@@ -263,6 +267,7 @@ final class WifiNotificationController {
         pw.println("mNotificationShown " + mNotificationShown);
         pw.println("mNumScansSinceNetworkStateChange " + mNumScansSinceNetworkStateChange);
     }
+
 
     private class NotificationEnabledSettingObserver extends ContentObserver {
         public NotificationEnabledSettingObserver(Handler handler) {

@@ -517,7 +517,8 @@ static void android_content_AssetManager_setConfiguration(JNIEnv* env, jobject c
                                                           jint screenWidth, jint screenHeight,
                                                           jint smallestScreenWidthDp,
                                                           jint screenWidthDp, jint screenHeightDp,
-                                                          jint screenLayout, jint uiMode,
+                                                          jint screenLayout,
+                                                          jint uiInvertedMode, jint uiMode,
                                                           jint sdkVersion)
 {
     AssetManager* am = assetManagerForJavaObject(env, clazz);
@@ -544,6 +545,7 @@ static void android_content_AssetManager_setConfiguration(JNIEnv* env, jobject c
     config.screenWidthDp = (uint16_t)screenWidthDp;
     config.screenHeightDp = (uint16_t)screenHeightDp;
     config.screenLayout = (uint8_t)screenLayout;
+    config.uiInvertedMode = (uint8_t)uiInvertedMode;
     config.uiMode = (uint8_t)uiMode;
     config.sdkVersion = (uint16_t)sdkVersion;
     config.minorVersion = 0;
@@ -568,22 +570,22 @@ static jint android_content_AssetManager_getResourceIdentifier(JNIEnv* env, jobj
     }
 
     const char16_t* defType16 = defType
-        ? (char16_t*)env->GetStringChars(defType, NULL) : NULL;
+        ? env->GetStringChars(defType, NULL) : NULL;
     jsize defTypeLen = defType
         ? env->GetStringLength(defType) : 0;
     const char16_t* defPackage16 = defPackage
-        ? (char16_t*)env->GetStringChars(defPackage, NULL) : NULL;
+        ? env->GetStringChars(defPackage, NULL) : NULL;
     jsize defPackageLen = defPackage
         ? env->GetStringLength(defPackage) : 0;
 
     jint ident = am->getResources().identifierForName(
-        (char16_t*)name16.get(), name16.size(), defType16, defTypeLen, defPackage16, defPackageLen);
+        name16.get(), name16.size(), defType16, defTypeLen, defPackage16, defPackageLen);
 
     if (defPackage16) {
-        env->ReleaseStringChars(defPackage, (jchar*)defPackage16);
+        env->ReleaseStringChars(defPackage, defPackage16);
     }
     if (defType16) {
-        env->ReleaseStringChars(defType, (jchar*)defType16);
+        env->ReleaseStringChars(defType, defType16);
     }
 
     return ident;
@@ -1574,7 +1576,7 @@ static jobjectArray android_content_AssetManager_getArrayStringResource(JNIEnv* 
                 str = env->NewStringUTF(str8);
             } else {
                 const char16_t* str16 = pool->stringAt(value.data, &strLen);
-                str = env->NewString((jchar*)str16, strLen);
+                str = env->NewString(str16, strLen);
             }
 
             // If one of our NewString{UTF} calls failed due to memory, an
@@ -1972,7 +1974,7 @@ static JNINativeMethod gAssetManagerMethods[] = {
         (void*) android_content_AssetManager_setLocale },
     { "getLocales",      "()[Ljava/lang/String;",
         (void*) android_content_AssetManager_getLocales },
-    { "setConfiguration", "(IILjava/lang/String;IIIIIIIIIIIIII)V",
+    { "setConfiguration", "(IILjava/lang/String;IIIIIIIIIIIIIII)V",
         (void*) android_content_AssetManager_setConfiguration },
     { "getResourceIdentifier","(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
         (void*) android_content_AssetManager_getResourceIdentifier },

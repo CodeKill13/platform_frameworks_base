@@ -38,7 +38,6 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.ImageView;
 
 import java.text.NumberFormat;
-import java.util.ArrayList;
 
 import com.android.internal.statusbar.StatusBarIcon;
 
@@ -56,7 +55,7 @@ public class StatusBarIconView extends AnimatedImageView {
     private String mNumberText;
     private Notification mNotification;
     private boolean mShowNotificationCount;
-    private GlobalSettingsObserver mObserver;
+    private SettingsObserver mObserver;
 
     public StatusBarIconView(Context context, String slot, Notification notification) {
         super(context);
@@ -74,8 +73,8 @@ public class StatusBarIconView extends AnimatedImageView {
         mShowNotificationCount = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.STATUSBAR_NOTIF_COUNT, 0) == 1;
         setContentDescription(notification);
-
-        mObserver = GlobalSettingsObserver.getInstance(context);
+        
+        mObserver = new SettingsObserver(new Handler());
 
         // We do not resize and scale system icons (on the right), only notification icons (on the
         // left).
@@ -85,8 +84,8 @@ public class StatusBarIconView extends AnimatedImageView {
             final float scale = (float)imageBounds / (float)outerBounds;
             setScaleX(scale);
             setScaleY(scale);
-            final float alpha = res.getFraction(R.dimen.status_bar_icon_drawing_alpha, 1, 1);
-            setAlpha(alpha);
+            setAlpha(Settings.System.getInt(mContext.getContentResolver(),
+            	Settings.System.STATUS_BAR_NOTIF_ICON_OPACITY, 140));
         }
 
         setScaleType(ImageView.ScaleType.CENTER);
@@ -100,8 +99,8 @@ public class StatusBarIconView extends AnimatedImageView {
         final float scale = (float)imageBounds / (float)outerBounds;
         setScaleX(scale);
         setScaleY(scale);
-        final float alpha = res.getFraction(R.dimen.status_bar_icon_drawing_alpha, 1, 1);
-        setAlpha(alpha);
+        setAlpha(Settings.System.getInt(mContext.getContentResolver(),
+        	Settings.System.STATUS_BAR_NOTIF_ICON_OPACITY, 140));
     }
 
     private static boolean streq(String a, String b) {
@@ -121,7 +120,7 @@ public class StatusBarIconView extends AnimatedImageView {
      * Returns whether the set succeeded.
      */
     public boolean set(StatusBarIcon icon) {
-        return set(icon, false);
+    return set(icon, false);
     }
 
     private boolean set(StatusBarIcon icon, boolean force) {
@@ -186,7 +185,7 @@ public class StatusBarIconView extends AnimatedImageView {
     /**
      * Returns the right icon to use for this item, respecting the iconId and
      * iconPackage (if set)
-     *
+     * 
      * @param context Context to use to get resources if iconPackage is not set
      * @return Drawable for this item, or null if the package or item could not
      *         be found
@@ -213,7 +212,7 @@ public class StatusBarIconView extends AnimatedImageView {
         if (icon.iconId == 0) {
             return null;
         }
-
+        
         try {
             return r.getDrawable(icon.iconId);
         } catch (RuntimeException e) {
@@ -237,6 +236,10 @@ public class StatusBarIconView extends AnimatedImageView {
         }
     }
 
+    public String getStatusBarSlot() {
+        return mSlot;
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -254,13 +257,13 @@ public class StatusBarIconView extends AnimatedImageView {
             canvas.drawText(mNumberText, mNumberX, mNumberY, mNumberPain);
         }
     }
-
+    
     @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
 
         if (mObserver != null) {
-            mObserver.attach(this);
+            mObserver.observe();
         }
     }
 
@@ -269,8 +272,7 @@ public class StatusBarIconView extends AnimatedImageView {
         super.onDetachedFromWindow();
 
         if (mObserver != null) {
-            mObserver.detach(this);
-            mObserver = null;
+            mObserver.unobserve();
         }
     }
 
@@ -324,44 +326,18 @@ public class StatusBarIconView extends AnimatedImageView {
     }
 
     public String toString() {
-        return "StatusBarIconView(slot=" + mSlot + " icon=" + mIcon
+        return "StatusBarIconView(slot=" + mSlot + " icon=" + mIcon 
             + " notification=" + mNotification + ")";
     }
 
-    static class GlobalSettingsObserver extends ContentObserver {
-        private static GlobalSettingsObserver sInstance;
-        private ArrayList<StatusBarIconView> mIconViews = new ArrayList<StatusBarIconView> ();
-        private Context mContext;
-
-        GlobalSettingsObserver(Handler handler, Context context) {
-            super(handler);
-            mContext = context.getApplicationContext();
+    class SettingsObserver extends ContentObserver {	
+        SettingsObserver(Handler handler) {
+            super(handler);	
         }
 
-        static GlobalSettingsObserver getInstance(Context context) {
-            if (sInstance == null) {
-                sInstance = new GlobalSettingsObserver(new Handler(), context);
-            }
-            return sInstance;
-        }
-
-        void attach(StatusBarIconView sbiv) {
-            if (mIconViews.isEmpty()) {
-            observe();
-            }
-            mIconViews.add(sbiv);
-        }
-
-        void detach(StatusBarIconView sbiv) {
-            mIconViews.remove(sbiv);
-                    if (mIconViews.isEmpty()) {
-                unobserve();
-            }
-        }
-
-        void observe() {
-            mContext.getContentResolver().registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.STATUSBAR_NOTIF_COUNT),
+        void observe() {	
+            mContext.getContentResolver().registerContentObserver(	
+                    Settings.System.getUriFor(Settings.System.STATUSBAR_NOTIF_COUNT),	
                     false, this);
         }
 
@@ -371,12 +347,12 @@ public class StatusBarIconView extends AnimatedImageView {
 
         @Override
         public void onChange(boolean selfChange) {
-             boolean showIconCount = Settings.System.getInt(mContext.getContentResolver(),
-                    Settings.System.STATUSBAR_NOTIF_COUNT, 0) == 1;
-             for (StatusBarIconView sbiv : mIconViews) {
-                                 sbiv.mShowNotificationCount = showIconCount;
-                 sbiv.set(sbiv.mIcon, true);
-             }
+        	setAlpha(Settings.System.getInt(mContext.getContentResolver(),
+        		Settings.System.STATUS_BAR_NOTIF_ICON_OPACITY, 140));
+            mShowNotificationCount = Settings.System.getInt(	
+                    mContext.getContentResolver(),
+                    Settings.System.STATUSBAR_NOTIF_COUNT, 0) == 1;	
+            set(mIcon, true);	
         }
     }
 }

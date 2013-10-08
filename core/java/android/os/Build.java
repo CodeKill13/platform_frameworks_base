@@ -110,6 +110,11 @@ public class Build {
          * a release build.
          */
         public static final String CODENAME = getString("ro.build.version.codename");
+        
+        /**
+         * The current version string that defines the XenonHD version
+         */
+        public static final String XENONHD = getString("ro.modversion");
 
         /**
          * The SDK version to use when accessing resources.

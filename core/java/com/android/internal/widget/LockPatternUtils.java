@@ -636,13 +636,8 @@ public class LockPatternUtils {
             KeyStore keyStore = KeyStore.getInstance();
             if (password != null) {
                 if (userHandle == UserHandle.USER_OWNER) {
-                    // Sync encryption password if enabled
-                    if (getSyncEncryptionPassword()) {
-                        Log.d(TAG, "Syncing encryption password");
-                        updateEncryptionPassword(password);
-                    } else {
-                        Log.d(TAG, "Skipping encryption password sync");
-                    }
+                    // Update the encryption password.
+                    updateEncryptionPassword(password);
 
                     // Update the keystore password
                     keyStore.password(password);
@@ -1358,21 +1353,4 @@ public class LockPatternUtils {
         return false;
     }
 
-    /**
-     * @hide
-     * Set the lock-sync-encryption-password option (whether to sync encryption
-     * password with lock screen token).
-     */
-    public void setSyncEncryptionPassword(boolean enabled) {
-        setBoolean(Settings.Secure.LOCK_SYNC_ENCRYPTION_PASSWORD, enabled);
-    }
-
-    /**
-     * @hide
-     * Get the lock-sync-encryption-password option (whether to sync encryption
-     * password with lock screen token).
-     */
-    public boolean getSyncEncryptionPassword() {
-        return getBoolean(Settings.Secure.LOCK_SYNC_ENCRYPTION_PASSWORD, false);
-    }
 }

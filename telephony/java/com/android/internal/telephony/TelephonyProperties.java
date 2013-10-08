@@ -102,6 +102,8 @@ public interface TelephonyProperties
      */
     static String PROPERTY_SIM_STATE = "gsm.sim.state";
 
+    static final String PROPERTY_SVDO = "ro.ril.svdo";
+
     /** The MCC+MNC (mobile country code+mobile network code) of the
      *  provider of the SIM. 5 or 6 decimal digits.
      *  Availability: SIM state must be "READY"
@@ -194,9 +196,9 @@ public interface TelephonyProperties
     static final String PROPERTY_IGNORE_NITZ = "telephony.test.ignore.nitz";
 
     /**
-     * Set to true to indicates support for simultaneous voice and EvDo.
+     * Set to true to indicates support for simultaneous voice and data.
      */
-    static final String PROPERTY_SVDO = "ro.ril.svdo";
+    static final String PROPERTY_SVDATA = "ro.config.svlte1x";
 
     /**
      * Property to control alpha ID display for proactive commands

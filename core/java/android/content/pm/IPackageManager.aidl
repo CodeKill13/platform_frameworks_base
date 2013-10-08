@@ -139,6 +139,8 @@ interface IPackageManager {
     ParceledListSlice getPackagesHoldingPermissions(in String[] permissions,
             int flags, int userId);
 
+    List<PackageInfo> getInstalledThemePackages();
+
     /**
      * This implements getInstalledApplications via a "last returned row"
      * mechanism that is not exposed in the API. This is to get around the IPC
@@ -208,9 +210,9 @@ interface IPackageManager {
     String getInstallerPackageName(in String packageName);
 
     void addPackageToPreferred(String packageName);
-    
+
     void removePackageFromPreferred(String packageName);
-    
+
     List<PackageInfo> getPreferredPackages(int flags);
 
     void resetPreferredActivities(int userId);
@@ -225,7 +227,11 @@ interface IPackageManager {
 
     int getPreferredActivities(out List<IntentFilter> outFilters,
             out List<ComponentName> outActivities, String packageName);
-    
+
+    boolean getPrivacyGuardSetting(in String packageName, int userId);
+
+    void setPrivacyGuardSetting(in String packageName, boolean enabled, int userId);
+
     /**
      * As per {@link android.content.pm.PackageManager#setComponentEnabledSetting}.
      */

@@ -419,8 +419,9 @@ public interface WindowManagerPolicy {
         public void switchKeyboardLayout(int deviceId, int direction);
 
         public void shutdown(boolean confirm);
+        public void reboot(String reason);
         public void rebootSafeMode(boolean confirm);
-        public void reboot(boolean confirm);
+        public void rebootTile();
     }
 
     /** Window has been added to the screen. */
@@ -1062,6 +1063,11 @@ public interface WindowManagerPolicy {
     public void systemBooted();
 
     /**
+     * name of package being worked on during boot time message
+     */
+    public void setPackageName(String pkgName);
+
+    /**
      * Show boot time message to the user.
      */
     public void showBootMessage(final CharSequence msg, final boolean always);
@@ -1137,11 +1143,6 @@ public interface WindowManagerPolicy {
     public boolean hasNavigationBar();
 
     /**
-     * Specifies whether device can generate KEY_ACTION_MENU keypress
-     */
-    public boolean hasMenuKeyEnabled();
-
-    /**
      * Lock the device now.
      */
     public void lockNow(Bundle options);
@@ -1195,14 +1196,4 @@ public interface WindowManagerPolicy {
      * @return True if the window is a top level one.
      */
     public boolean isTopLevelWindow(int windowType);
-
-    /**
-     * A window animation has been scheduled
-     */
-    public void windowAnimationStarted();
-
-    /**
-     * Animating windows has finished
-     */
-    public void windowAnimationFinished();
 }

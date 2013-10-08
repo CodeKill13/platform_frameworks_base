@@ -507,6 +507,17 @@ public class MockPackageManager extends PackageManager {
 
     /** @hide */
     @Override
+    public void setPrivacyGuardSetting(String packageName, boolean enabled) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** @hide */
+    @Override
+    public boolean getPrivacyGuardSetting(String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void addPreferredActivity(IntentFilter filter,
             int match, ComponentName[] set, ComponentName activity) {
         throw new UnsupportedOperationException();
@@ -599,9 +610,6 @@ public class MockPackageManager extends PackageManager {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * @hide
-     */
     @Override
     public void verifyPendingInstall(int id, int verificationCode) {
         throw new UnsupportedOperationException();

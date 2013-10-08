@@ -622,6 +622,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
            upgradeVersion = 47;
        }
 
+
         if (upgradeVersion == 47) {
             /*
              * The password mode constants have changed again; reset back to no
@@ -1544,38 +1545,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (upgradeVersion != currentVersion) {
             Log.w(TAG, "Got stuck trying to upgrade from version " + upgradeVersion
                     + ", must wipe the settings provider");
-            wipeDB(db, oldVersion, upgradeVersion, currentVersion);
+            db.execSQL("DROP TABLE IF EXISTS global");
+            db.execSQL("DROP TABLE IF EXISTS globalIndex1");
+            db.execSQL("DROP TABLE IF EXISTS system");
+            db.execSQL("DROP INDEX IF EXISTS systemIndex1");
+            db.execSQL("DROP TABLE IF EXISTS secure");
+            db.execSQL("DROP INDEX IF EXISTS secureIndex1");
+            db.execSQL("DROP TABLE IF EXISTS gservices");
+            db.execSQL("DROP INDEX IF EXISTS gservicesIndex1");
+            db.execSQL("DROP TABLE IF EXISTS bluetooth_devices");
+            db.execSQL("DROP TABLE IF EXISTS bookmarks");
+            db.execSQL("DROP INDEX IF EXISTS bookmarksIndex1");
+            db.execSQL("DROP INDEX IF EXISTS bookmarksIndex2");
+            db.execSQL("DROP TABLE IF EXISTS favorites");
+            onCreate(db);
+
+            // Added for diagnosing settings.db wipes after the fact
+            String wipeReason = oldVersion + "/" + upgradeVersion + "/" + currentVersion;
+            db.execSQL("INSERT INTO secure(name,value) values('" +
+                    "wiped_db_reason" + "','" + wipeReason + "');");
         }
-    }
-
-    private void wipeDB(SQLiteDatabase db, int oldVersion, int upgradeVersion,
-     int currentVersion) {
-        db.execSQL("DROP TABLE IF EXISTS global");
-        db.execSQL("DROP TABLE IF EXISTS globalIndex1");
-        db.execSQL("DROP TABLE IF EXISTS system");
-        db.execSQL("DROP INDEX IF EXISTS systemIndex1");
-        db.execSQL("DROP TABLE IF EXISTS secure");
-        db.execSQL("DROP INDEX IF EXISTS secureIndex1");
-        db.execSQL("DROP TABLE IF EXISTS gservices");
-        db.execSQL("DROP INDEX IF EXISTS gservicesIndex1");
-        db.execSQL("DROP TABLE IF EXISTS bluetooth_devices");
-        db.execSQL("DROP TABLE IF EXISTS bookmarks");
-        db.execSQL("DROP INDEX IF EXISTS bookmarksIndex1");
-        db.execSQL("DROP INDEX IF EXISTS bookmarksIndex2");
-        db.execSQL("DROP TABLE IF EXISTS favorites");
-        onCreate(db);
-
-        // Added for diagnosing settings.db wipes after the fact
-        String wipeReason = oldVersion + "/" + upgradeVersion + "/" + currentVersion;
-        db.execSQL("INSERT INTO secure(name,value) values('" +
-                "wiped_db_reason" + "','" + wipeReason + "');");
-    }
-
-    @Override
-    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Not much can be done here - wipe database completely and create anew
-        // otherwise an exception will be thrown on boot preventing startup.
-        wipeDB(db, oldVersion, newVersion, oldVersion);
     }
 
     private String[] hashsetToStringArray(HashSet<String> set) {
@@ -1973,9 +1962,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             // Set default tty mode
             loadSetting(stmt, Settings.System.TTY_MODE, 0);
 
-            // Set default noise suppression value
-            loadSetting(stmt, Settings.System.NOISE_SUPPRESSION, 0);
-
             loadIntegerSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
                     R.integer.def_screen_brightness);
 
@@ -1996,7 +1982,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadIntegerSetting(stmt, Settings.System.POINTER_SPEED,
                     R.integer.def_pointer_speed);
-
         } finally {
             if (stmt != null) stmt.close();
         }
@@ -2009,6 +1994,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 R.bool.def_sound_effects_enabled);
         loadBooleanSetting(stmt, Settings.System.HAPTIC_FEEDBACK_ENABLED,
                 R.bool.def_haptic_feedback);
+        loadIntegerSetting(stmt, Settings.System.VOLUME_ADJUST_SOUNDS_ENABLED,
+            R.integer.def_volume_adjust_sounds_enabled);
         loadIntegerSetting(stmt, Settings.System.LOCKSCREEN_SOUNDS_ENABLED,
             R.integer.def_lockscreen_sounds_enabled);
     }
@@ -2109,9 +2096,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             loadBooleanSetting(stmt, Settings.Secure.USER_SETUP_COMPLETE,
                     R.bool.def_user_setup_complete);
-
-            loadIntegerSetting(stmt, Settings.Secure.DIALPAD_AUTOCOMPLETE,
-                    R.integer.def_dialpad_autocomplete);
         } finally {
             if (stmt != null) stmt.close();
         }
@@ -2258,8 +2242,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             // Set the preferred network mode to 0 = Global, CDMA default
             int type;
+            if (TelephonyManager.getLteOnCdmaModeStatic() == PhoneConstants.LTE_ON_CDMA_TRUE) {
+                type = Phone.NT_MODE_GLOBAL;
+            } else {
                 type = SystemProperties.getInt("ro.telephony.default_network",
                         RILConstants.PREFERRED_NETWORK_MODE);
+            }
             loadSetting(stmt, Settings.Global.PREFERRED_NETWORK_MODE, type);
 
             // --- New global settings start here

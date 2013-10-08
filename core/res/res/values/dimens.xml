@@ -26,8 +26,6 @@
     <dimen name="thumbnail_width_alt">168dp</dimen>
     <!-- The height that is used when creating thumbnails of applications. -->
     <dimen name="thumbnail_height_alt">267dp</dimen>
-    <dimen name="tablet_thumbnail_width">300dp</dimen>
-    <dimen name="tablet_thumbnail_height">280dp</dimen>
     <!-- The standard size (both width and height) of an application icon that
          will be displayed in the app launcher and elsewhere. -->
     <dimen name="app_icon_size">48dip</dimen>
@@ -40,8 +38,6 @@
     <dimen name="status_bar_height">25dip</dimen>
     <!-- Height of the bottom navigation / system bar. -->
     <dimen name="navigation_bar_height">48dp</dimen>
-    <!-- Height of the bottom navigation / system bar. -->
-    <dimen name="navigation_bar_at_zero">0dp</dimen>
     <!-- Height of the bottom navigation bar in portrait; often the same as @dimen/navigation_bar_height -->
     <dimen name="navigation_bar_height_landscape">48dp</dimen>
     <!-- Width of the navigation bar when it is placed vertically on the screen -->
@@ -249,9 +245,6 @@
     <!-- Size of smaller notification text (see TextAppearance.StatusBar.EventContent.Line2, Info, Time) -->
     <dimen name="notification_subtext_size">12dp</dimen>
 
-    <!-- Lockscreen target insets -->
-    <item type="dimen" name="lockscreen_target_inset">25dp</item>
-
     <!-- Keyguard dimensions -->
     <!-- TEMP -->
     <dimen name="kg_security_panel_height">600dp</dimen>
@@ -350,9 +343,11 @@
     used on tablets; on phones, this size is determined by the space left by the
     security mode. -->
     <dimen name="kg_small_widget_height">160dp</dimen>
-
-    <!-- Left padding of num pad key on keyguard -->
-    <dimen name="kg_num_pad_key_padding_left">10dp</dimen>
+    
+    <dimen name="icon_size_20">20.0dip</dimen>
+    <dimen name="icon_size_15">15.0dip</dimen>
+    <dimen name="notification_ribbon_padding">16dp</dimen>
+    <dimen name="lockscreen_ribbon_padding">16dp</dimen>
 
     <!-- Font size for notification text -->
     <dimen name="glowpad_notification_font_size">12dp</dimen>

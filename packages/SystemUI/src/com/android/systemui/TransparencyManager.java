@@ -24,7 +24,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 
-import com.vanir.BackgroundAlphaColorDrawable;
+import com.android.internal.util.aokp.BackgroundAlphaColorDrawable;
 import com.android.systemui.statusbar.NavigationBarView;
 import com.android.systemui.statusbar.phone.PanelBar;
 
@@ -38,8 +38,6 @@ public class TransparencyManager {
 
     NavigationBarView mNavbar;
     PanelBar mStatusbar;
-    private boolean mListening = false;
-    private boolean mObserving = false;
 
     SomeInfo mNavbarInfo = new SomeInfo();
     SomeInfo mStatusbarInfo = new SomeInfo();
@@ -56,7 +54,7 @@ public class TransparencyManager {
 
     private static class SomeInfo {
         ValueAnimator anim;
-        int color; 
+        int color;
         float keyguardAlpha;
         float homeAlpha;
         boolean tempDisable;
@@ -71,30 +69,22 @@ public class TransparencyManager {
 
     public TransparencyManager(Context context) {
         mContext = context;
+
         km = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
         am = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        setup();
-    }
 
-    public void setup() {
-        if (!mListening) {
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-            mContext.registerReceiver(new BroadcastReceiver() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        context.registerReceiver(new BroadcastReceiver() {
 
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    update();
-                }
-            }, intentFilter);
-            mListening = true;
-        }
-        
-        if (!mObserving) {
-            observer().observe();
-            observer().onChange(true);
-            mObserving = true;
-        }
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                update();
+            }
+        }, intentFilter);
+
+        SettingsObserver settingsObserver = new SettingsObserver(mHandler);
+        settingsObserver.observe();
     }
 
     public void update() {
@@ -136,24 +126,15 @@ public class TransparencyManager {
 
         final float alpha = a;
 
-        ValueAnimator anim = null;
-        if (v.getBackground() instanceof BackgroundAlphaColorDrawable) {
-            final BackgroundAlphaColorDrawable bg = (BackgroundAlphaColorDrawable) v
-                    .getBackground();
-            anim = ValueAnimator.ofObject(new ArgbEvaluator(), info.color,
-                    BackgroundAlphaColorDrawable.applyAlphaToColor(bg.getBgColor(), alpha));
-            anim.addUpdateListener(new AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    info.color = (Integer) animation.getAnimatedValue();
-                    bg.setColor(info.color);
-                }
-            });
-        } else {
-            // custom image is set by the theme, let's just apply the alpha if we can.
-            v.getBackground().setAlpha(BackgroundAlphaColorDrawable.floatAlphaToInt(alpha));
-            return null;
-        } 
+        final BackgroundAlphaColorDrawable bg = (BackgroundAlphaColorDrawable) v.getBackground();
+        ValueAnimator anim = ValueAnimator.ofObject(new ArgbEvaluator(), info.color, BackgroundAlphaColorDrawable.applyAlphaToColor(info.color, alpha));
+        anim.addUpdateListener(new AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                info.color = (Integer)animation.getAnimatedValue();
+                bg.setColor(info.color);
+            }
+        });
         anim.addListener(new AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
@@ -178,14 +159,18 @@ public class TransparencyManager {
         mIsKeyguardShowing = isKeyguardShowing();
         mIsHomeShowing = isLauncherShowing();
 
+        int anims = 0;
+
         ValueAnimator navAnim = null, sbAnim = null;
         if (mNavbar != null) {
             navAnim = createAnimation(mNavbarInfo, mNavbar);
+            anims++;
         }
         if (mStatusbar != null) {
             sbAnim = createAnimation(mStatusbarInfo, mStatusbar);
+            anims++;
         }
-        if (navAnim != null && sbAnim != null) { 
+        if (anims > 1) {
             AnimatorSet set = new AnimatorSet();
             set.playTogether(navAnim, sbAnim);
             set.start();
@@ -195,7 +180,7 @@ public class TransparencyManager {
             } else if(sbAnim != null) {
                 sbAnim.start();
             }
-        } 
+        }
     }
 
     private boolean isLauncherShowing() {
@@ -235,18 +220,7 @@ public class TransparencyManager {
                 && homeInfo.name.equals(component.getClassName());
     }
 
-    private SettingsObserver _observer;
-        SettingsObserver observer() {
-			if (_observer == null)
-			    _observer = new SettingsObserver(mHandler);
-			    return _observer;
-			}
-        private void unobserve() {
-			if (_observer != null)
-			    _observer._unobserve();
-            }
-
-    private class SettingsObserver extends ContentObserver {
+    class SettingsObserver extends ContentObserver {
         SettingsObserver(Handler handler) {
             super(handler);
         }
@@ -262,19 +236,11 @@ public class TransparencyManager {
                     this);
             updateSettings();
         }
-        private void _unobserve() {
-			mContext.getContentResolver().unregisterContentObserver(_observer);
-			_observer = null;
-        }
 
         @Override
         public void onChange(boolean selfChange) {
             updateSettings();
         }
-    }
-
-    public void destroy() {
-        unobserve();
     }
 
     protected void updateSettings() {

@@ -27,8 +27,6 @@ import android.content.IntentFilter;
 import android.content.pm.IPackageManager;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.database.ContentObserver;
-import android.database.Cursor;
 import android.media.AudioService;
 import android.net.wifi.p2p.WifiP2pService;
 import android.os.Environment;
@@ -41,7 +39,6 @@ import android.os.StrictMode;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
-import android.provider.Settings;
 import android.service.dreams.DreamService;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
@@ -91,19 +88,6 @@ class ServerThread extends Thread {
         Log.wtf(TAG, "BOOT FAILURE " + msg, e);
     }
 
-    private class AdbPortObserver extends ContentObserver {
-        public AdbPortObserver() {
-            super(null);
-        }
-        @Override
-        public void onChange(boolean selfChange) {
-            int adbPort = Settings.Secure.getInt(mContentResolver,
-                Settings.Secure.ADB_PORT, 0);
-            // setting this will control whether ADB runs on TCP/IP or USB
-            SystemProperties.set("service.adb.tcp.port", Integer.toString(adbPort));
-        }
-    }
-
     @Override
     public void run() {
         EventLog.writeEvent(EventLogTags.BOOT_PROGRESS_SYSTEM_RUN,
@@ -146,7 +130,6 @@ class ServerThread extends Thread {
         LightsService lights = null;
         PowerManagerService power = null;
         DisplayManagerService display = null;
-        DeviceHandlerService device = null;
         BatteryService battery = null;
         VibratorService vibrator = null;
         AlarmManagerService alarm = null;
@@ -300,15 +283,11 @@ class ServerThread extends Thread {
             Slog.i(TAG, "System Content Providers");
             ActivityManagerService.installSystemProviders();
 
-            // Requires context, activity manager y providers
-            Slog.i(TAG, "Device Handler Service");
-            device = new DeviceHandlerService(context);
-
             Slog.i(TAG, "Lights Service");
             lights = new LightsService(context);
 
             Slog.i(TAG, "Battery Service");
-            battery = new BatteryService(context, lights, device);
+            battery = new BatteryService(context, lights);
             ServiceManager.addService("battery", battery);
 
             Slog.i(TAG, "Vibrator Service");
@@ -333,7 +312,7 @@ class ServerThread extends Thread {
 
             Slog.i(TAG, "Window Manager");
             wm = WindowManagerService.main(context, power, display, inputManager,
-                    device, uiHandler, wmHandler,
+                    uiHandler, wmHandler,
                     factoryTest != SystemServer.FACTORY_TEST_LOW_LEVEL,
                     !firstBoot, onlyCore);
             ServiceManager.addService(Context.WINDOW_SERVICE, wm);
@@ -372,6 +351,7 @@ class ServerThread extends Thread {
         StatusBarManagerService statusBar = null;
         InputMethodManagerService imm = null;
         AppWidgetService appWidget = null;
+        ProfileManagerService profile = null;
         NotificationManagerService notification = null;
         WallpaperManagerService wallpaper = null;
         LocationManagerService location = null;
@@ -567,6 +547,14 @@ class ServerThread extends Thread {
                     contentService.systemReady();
             } catch (Throwable e) {
                 reportWtf("making Content Service ready", e);
+            }
+
+            try {
+                Slog.i(TAG, "Profile Manager");
+                profile = new ProfileManagerService(context);
+                ServiceManager.addService(Context.PROFILE_SERVICE, profile);
+            } catch (Throwable e) {
+                Slog.e(TAG, "Failure starting Profile Manager", e);
             }
 
             try {
@@ -773,16 +761,6 @@ class ServerThread extends Thread {
                 Slog.e(TAG, "Failure starting AssetRedirectionManager Service", e);
             }
 
-            if (context.getResources().getBoolean(
-                    com.android.internal.R.bool.config_enableIrdaManagerService)) {
-                try {
-                    Slog.i(TAG, "IrdaManager Service");
-                    ServiceManager.addService("irda", new IrdaManagerService(context));
-                } catch (Throwable e) {
-                    Slog.e(TAG, "Failure starting Irda Service", e);
-                }
-            }
-
             try {
                 Slog.i(TAG, "IdleMaintenanceService");
                 new IdleMaintenanceService(context, battery);
@@ -790,15 +768,6 @@ class ServerThread extends Thread {
                 reportWtf("starting IdleMaintenanceService", e);
             }
         }
-        
-        // make sure the ADB_ENABLED setting value matches the secure property value
-        Settings.Secure.putInt(mContentResolver, Settings.Secure.ADB_PORT,
-                Integer.parseInt(SystemProperties.get("service.adb.tcp.port", "-1")));
-
-        // register observer to listen for settings changes
-        mContentResolver.registerContentObserver(
-            Settings.Secure.getUriFor(Settings.Secure.ADB_PORT),
-            false, new AdbPortObserver());
 
         // Before things start rolling, be sure we have decided whether
         // we are in safe mode.

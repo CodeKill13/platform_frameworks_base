@@ -298,28 +298,6 @@ public final class ContactsContract {
          * @hide
          */
         public static final int DISPLAY_ORDER_ALTERNATIVE = 2;
-        
-        /**
-        * A key in the {@link android.provider.Settings android.provider.Settings} provider
-        * that stores the preferred view mode for contacts (standard vs. compact).
-        *
-        * @hide
-        */
-        public static final String VIEW_MODE = "android.contacts.VIEW_MODE";
-
-        /**
-        * The value for the VIEW_MODE key corresponding to displaying a standard list view.
-        *
-        * @hide
-        */
-        public static final int VIEW_MODE_STANDARD = 1;
-
-        /**
-        * The value for the VIEW_MODE key corresponding to displaying a compact list view.
-        *
-        * @hide
-        */
-        public static final int VIEW_MODE_COMPACT = 2;
     }
 
     /**
@@ -852,6 +830,13 @@ public final class ContactsContract {
          * <P>Type: TEXT (URI to the ringtone)</P>
          */
         public static final String CUSTOM_RINGTONE = "custom_ringtone";
+
+        /**
+         * URI for a custom vibration associated with the contact. If null or missing,
+         * the default vibration is used.
+         * <P>Type: TEXT (URI to the vibration)</P>
+         */
+        public static final String CUSTOM_VIBRATION = "custom_vibration";
 
         /**
          * Whether the contact should always be sent to voicemail. If missing,

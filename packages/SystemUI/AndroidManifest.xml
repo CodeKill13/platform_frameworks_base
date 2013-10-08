@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_ALL_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.REBOOT" />
+
     <uses-permission android:name="android.permission.INJECT_EVENTS" />
     <uses-permission android:name="android.permission.DUMP" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
@@ -17,12 +17,9 @@
     <uses-permission android:name="android.permission.STATUS_BAR_SERVICE" />
     <uses-permission android:name="android.permission.STATUS_BAR" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.REMOTE_AUDIO_PLAYBACK" />
-    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
 
     <uses-permission android:name="android.permission.MANAGE_USERS" />
-    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.READ_PROFILE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CONFIGURE_WIFI_DISPLAY" />
@@ -32,20 +29,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.MANAGE_NETWORK_POLICY" />
-
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_4G_RADIO_DISABLE" />
-    <uses-permission android:name="android.permission.ACCESS_4G_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_4G_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_MODE" />
-    <uses-permission android:name="android.permission.CONNECTIVITY_INTERNAL" />
-
-    <!-- Power widget -->
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <!-- Physical hardware -->
     <uses-permission android:name="android.permission.MANAGE_USB" />
@@ -65,9 +53,8 @@
     <uses-permission android:name="android.permission.START_ANY_ACTIVITY" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
-
     <uses-permission android:name="android.permission.GET_TOP_ACTIVITY_INFO" />
-    
+
     <!-- WindowManager -->
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -79,31 +66,16 @@
     <!-- DreamManager -->
     <uses-permission android:name="android.permission.READ_DREAM_STATE" />
     <uses-permission android:name="android.permission.WRITE_DREAM_STATE" />
-
-    <!-- it's VANIR bitch -->
-    <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" /> 
+    
+    <!-- AOKP extra permissions -->
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-
-    <!-- Secure Screenshot -->
-    <protected-broadcast android:name="android.permission.SCREENSHOT" />
-    <protected-broadcast android:name="android.intent.action.SCREENSHOT" />
-
-    <permission android:name="android.permission.SCREENSHOT"
-                android:protectionLevel="signatureOrSystem"
-                android:description="@string/permdesc_screenshot"
-                android:label="@string/permlab_screenshot" />
-
-    <!-- FOR TORCH -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.ACCESS_THEME_SERVICE" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
-
+    
     <!--Halo-->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/> 
 
     <application
         android:persistent="true"
@@ -122,14 +94,11 @@
             android:exported="true"
             />
 
+        <!-- started from PhoneWindowManager
+             TODO: Should have an android:permission attribute -->
         <service android:name=".screenshot.TakeScreenshotService"
             android:process=":screenshot"
-            android:permission="android.permission.SCREENSHOT"
-            android:exported="false">
-            <intent-filter>
-               <android name="android.intent.action.SCREENSHOT"/>
-            </intent-filter>
-        </service>
+            android:exported="false" />
 
         <receiver android:name=".screenshot.TrashScreenshot"
                 android:exported="true" />
@@ -146,17 +115,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-
-        <activity
-            android:name="com.android.systemui.CreateShortcut"
-            android:label="@string/shortcut_label"
-            android:icon="@drawable/vanir_actions">
-            <intent-filter>
-                <action android:name="android.intent.action.CREATE_SHORTCUT" />
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
 
         <activity android:name=".usb.UsbStorageActivity"
                   android:label="@*android:string/usb_storage_activity_title"
@@ -186,6 +144,12 @@
                 <action android:name="com.android.systemui.recent.action.CANCEL_PRELOAD" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".aokp.AwesomeReceiver">
+            <intent-filter>
+                <action android:name="com.android.systemui.aokp.LAUNCH_ACTION" />
+            </intent-filter>
+        </receiver>
 
         <!-- started from UsbDeviceSettingsManager -->
         <activity android:name=".usb.UsbConfirmActivity"
@@ -213,13 +177,6 @@
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true">
         </activity>
-
-        <receiver
-            android:name=".vanir.VanirReceiver">
-            <intent-filter>
-                <action android:name="com.android.systemui.vanir.LAUNCH_ACTION" />
-            </intent-filter>
-        </receiver>
 
         <!-- started from UsbDeviceSettingsManager -->
         <activity android:name=".usb.UsbAccessoryUriActivity"
@@ -267,33 +224,33 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.android.systemui.vanir.FlushMemory"
-            android:label="@string/toggle_flushmemory"
-            android:icon="@drawable/vanir_flush_memory"
+            android:name="com.android.systemui.aokp.NavbarToggle"
+            android:label="@string/toggle_navbar"
+            android:icon="@drawable/toggle_navbar"
             android:theme="@android:style/Theme.Holo.Panel"
             android:excludeFromRecents="true"
             android:launchMode="singleTop" >
             <intent-filter>
-                <action android:name="com.android.systemui.INTENT_FLUSHMEMORY_TOGGLE" />
+                <action android:name="com.android.systemui.INTENT_NAVBAR_TOGGLE" />
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="com.android.systemui.SHORTCUT" />
             </intent-filter>
         </activity>
         <activity
-            android:name="com.android.systemui.vanir.ScreenShotAction"
-            android:label="@string/action_screenshot"
-            android:icon="@drawable/ic_sysbar_screenshot"
+            android:name="com.android.systemui.aokp.StatusbarToggleShortcut"
+            android:label="@string/toggle_statusbar"
+            android:icon="@drawable/toggle_statusbar"
             android:theme="@android:style/Theme.Holo.Panel"
             android:excludeFromRecents="true"
             android:launchMode="singleTop" >
             <intent-filter>
-                <action android:name="com.android.systemui.ACTION_SCREENSHOT" />
+                <action android:name="com.android.systemui.INTENT_STATUSBAR_TOGGLE" />
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="com.android.systemui.SHORTCUT" />
             </intent-filter>
         </activity>
         <activity
-            android:name="com.android.systemui.vanir.WidgetToggle"
+            android:name="com.android.systemui.aokp.WidgetToggle"
             android:label="@string/toggle_widgets"
             android:icon="@drawable/ic_sysbar_widget"
             android:theme="@android:style/Theme.Holo.Panel"
@@ -305,8 +262,8 @@
                 <category android:name="com.android.systemui.SHORTCUT" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="com.android.systemui.vanir.RingVibToggle"
+		<activity
+            android:name="com.android.systemui.aokp.RingVibToggle"
             android:label="@string/toggle_ring_vib"
             android:icon="@drawable/ic_lockscreen_vib"
             android:theme="@android:style/Theme.Holo.Panel"
@@ -319,7 +276,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.android.systemui.vanir.RingSilentToggle"
+            android:name="com.android.systemui.aokp.RingSilentToggle"
             android:label="@string/toggle_ring_silent"
             android:icon="@drawable/ic_lockscreen_silent"
             android:theme="@android:style/Theme.Holo.Panel"
@@ -332,7 +289,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.android.systemui.vanir.RingVibSilentToggle"
+            android:name="com.android.systemui.aokp.RingVibSilentToggle"
             android:label="@string/toggle_ring_vib_silent"
             android:icon="@drawable/ic_lockscreen_soundon"
             android:theme="@android:style/Theme.Holo.Panel"
@@ -342,6 +299,15 @@
                 <action android:name="com.android.systemui.INTENT_RING_VIB_SILENT_TOGGLE" />
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="com.android.systemui.SHORTCUT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.android.systemui.CreateShortcut"
+            android:label="@string/shortcut_label"
+            android:icon="@drawable/ic_sysbar_null">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity android:name="com.android.systemui.WidgetSelectActivity"
@@ -361,22 +327,19 @@
                 <action android:name="android.service.dreams.DreamService" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.service.dream"
+                android:resource="@xml/dream_info" />
         </service>
 
-        <activity android:name=".statusbar.sidebar.SidebarConfigurationActivity"
-                  android:label="@string/title_activity_sidebar_configuration"
-                  android:taskAffinity=""
-                  android:excludeFromRecents="true"
-                  android:exported="true">
+        <activity android:name=".BeanBagDreamSettings"
+                android:taskAffinity=""
+                android:excludeFromRecents="true"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-
-        <provider
-            android:name=".statusbar.sidebar.SidebarContentProvider"
-            android:authorities="org.chameleonos.sidebar.contentprovider" >
-        </provider>
 
         <activity android:name=".Somnambulator"
             android:label="@string/start_dreams"
@@ -392,36 +355,16 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name="com.android.systemui.Torch"
-            android:label="@string/toggle_torch"
-            android:icon="@drawable/toggle_torch"
-            android:theme="@android:style/Theme.Holo.Panel"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTop" >
-            <intent-filter>
-                 <action android:name="com.android.systemui.INTENT_TORCH_ON"/>
-                 <action android:name="com.android.systemui.INTENT_TORCH_OFF"/>
-                 <action android:name="com.android.systemui.INTENT_TORCH_TOGGLE" />
-                 <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="com.android.systemui.INTENT_TORCH" />
-                <category android:name="com.android.systemui.SHORTCUT" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name="com.android.systemui.Transparent"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
         <activity android:name=".statusbar.policy.activedisplay.DummyActivity"
-                  android:label=""
-                  android:taskAffinity=""
-                  android:excludeFromRecents="true"
-                  android:exported="true"
-                  android:theme="@style/Theme.DummyActivity">
+            android:label=""
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/Theme.DummyActivity">
         </activity>
+
+		<activity android:name="com.android.systemui.Transparent"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
     </application>
 </manifest>

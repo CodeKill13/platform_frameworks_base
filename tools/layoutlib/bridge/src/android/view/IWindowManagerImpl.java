@@ -488,11 +488,6 @@ public class IWindowManagerImpl implements IWindowManager {
     }
 
     @Override
-    public void updateDisplayMetrics() {
-
-    }
-
-    @Override
     public IBinder getFocusedWindowToken() {
         // TODO Auto-generated method stub
         return null;
@@ -528,10 +523,5 @@ public class IWindowManagerImpl implements IWindowManager {
     public boolean isRotationFrozen() throws RemoteException {
         // TODO Auto-generated method stub
         return false;
-    }
-
-    @Override
-    public boolean hasMenuKeyEnabled() {
-        return true;
     }
 }

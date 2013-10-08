@@ -17,7 +17,6 @@
 package android.view;
 
 import android.app.AppGlobals;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -62,7 +61,7 @@ public class ViewConfiguration {
      * Defines the default duration in milliseconds before a press turns into
      * a long press
      */
-    private static final int DEFAULT_LONG_PRESS_TIMEOUT = 450;
+    private static final int DEFAULT_LONG_PRESS_TIMEOUT = 500;
 
     /**
      * Defines the time between successive key repeats in milliseconds.
@@ -74,21 +73,21 @@ public class ViewConfiguration {
      * appropriate button to bring up the global actions dialog (power off,
      * lock screen, etc).
      */
-    private static final int GLOBAL_ACTIONS_KEY_TIMEOUT = 450;
+    private static final int GLOBAL_ACTIONS_KEY_TIMEOUT = 500;
 
     /**
      * Defines the duration in milliseconds we will wait to see if a touch event
      * is a tap or a scroll. If the user does not move within this interval, it is
      * considered to be a tap.
      */
-    private static final int TAP_TIMEOUT = 175;
+    private static final int TAP_TIMEOUT = 180;
 
     /**
      * Defines the duration in milliseconds we will wait to see if a touch event
      * is a jump tap. If the user does not complete the jump tap within this interval, it is
      * considered to be a tap.
      */
-    private static final int JUMP_TAP_TIMEOUT = 450;
+    private static final int JUMP_TAP_TIMEOUT = 500;
 
     /**
      * Defines the duration in milliseconds between the first tap's up event and
@@ -115,12 +114,12 @@ public class ViewConfiguration {
      * Defines the duration in milliseconds we want to display zoom controls in response
      * to a user panning within an application.
      */
-    private static final int ZOOM_CONTROLS_TIMEOUT = 2800;
+    private static final int ZOOM_CONTROLS_TIMEOUT = 3000;
 
     /**
      * Inset in dips to look for touchable content when the user touches the edge of the screen
      */
-    private static final int EDGE_SLOP = 10;
+    private static final int EDGE_SLOP = 12;
 
     /**
      * Distance a touch can wander before we think the user is scrolling in dips.
@@ -174,7 +173,7 @@ public class ViewConfiguration {
     /**
      * Maximum velocity to initiate a fling, as measured in dips per second
      */
-    private static final int MAXIMUM_FLING_VELOCITY = 15000;
+    private static final int MAXIMUM_FLING_VELOCITY = 8000;
 
     /**
      * Delay before dispatching a recurring accessibility event in milliseconds.
@@ -194,7 +193,7 @@ public class ViewConfiguration {
     /**
      * The coefficient of friction applied to flings/scrolls.
      */
-    private static final float SCROLL_FRICTION = 0.011f;
+    private static final float SCROLL_FRICTION = 0.015f;
 
     /**
      * Max distance in dips to overscroll for edge effects
@@ -223,7 +222,6 @@ public class ViewConfiguration {
 
     private boolean sHasPermanentMenuKey;
     private boolean sHasPermanentMenuKeySet;
-
     private Context mContext;
 
     static final SparseArray<ViewConfiguration> sConfigurations =
@@ -274,7 +272,6 @@ public class ViewConfiguration {
         }
 
         mContext = context;
-
         mEdgeSlop = (int) (sizeAndDensity * EDGE_SLOP + 0.5f);
         mFadingEdgeLength = (int) (sizeAndDensity * FADING_EDGE_LENGTH + 0.5f);
         mMinimumFlingVelocity = (int) (density * MINIMUM_FLING_VELOCITY + 0.5f);
@@ -683,24 +680,16 @@ public class ViewConfiguration {
      * @return true if a permanent menu key is present, false otherwise.
      */
     public boolean hasPermanentMenuKey() {
-        // Report no menu key if only soft buttons are available
-        if (!sHasPermanentMenuKey) {
+        // The action overflow button within app UI can
+        // be controlled with a system setting
+        int showOverflowButton = Settings.System.getInt(
+                mContext.getContentResolver(),
+                Settings.System.UI_FORCE_OVERFLOW_BUTTON, 0);
+        if (showOverflowButton == 1) {
+            // Force overflow button on by reporting that
+            // the device has no permanent menu key
             return false;
-        }
-
-        // Report no menu key if overflow button is forced to enabled
-        ContentResolver res = mContext.getContentResolver();
-        boolean forceOverflowButton = Settings.System.getInt(res,
-                Settings.System.UI_FORCE_OVERFLOW_BUTTON, 0) == 1;
-        if (forceOverflowButton) {
-            return false;
-        }
-
-        // Report menu key presence based on hardware key rebinding
-        IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
-        try {
-            return wm.hasMenuKeyEnabled();
-        } catch (RemoteException ex) {
+        } else {
             return sHasPermanentMenuKey;
         }
     }

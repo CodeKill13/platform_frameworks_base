@@ -203,16 +203,13 @@ public class Contacts {
                 selectString = "key=?";
                 selectArgs = new String[] {key};
             }
-            Cursor cursor = null;
-            try {
-                cursor = cr.query(Settings.CONTENT_URI, new String[]{VALUE},
+            Cursor cursor = cr.query(Settings.CONTENT_URI, new String[]{VALUE},
                     selectString, selectArgs, null);
+            try {
                 if (!cursor.moveToNext()) return null;
                 return cursor.getString(0);
             } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
+                cursor.close();
             }
         }
 
@@ -309,6 +306,14 @@ public class Contacts {
          */
         @Deprecated
         public static final String CUSTOM_RINGTONE = "custom_ringtone";
+
+        /**
+         * A custom vibration associated with a person. Not always present.
+         * <P>Type: TEXT (URI to the vibration)</P>
+         * @deprecated see {@link android.provider.ContactsContract}
+         */
+        @Deprecated
+        public static final String CUSTOM_VIBRATION = "custom_vibration";
 
         /**
          * Whether the person should always be sent to voicemail. Not always

@@ -19,16 +19,19 @@ package com.android.systemui.statusbar.phone;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
  *
  */
-class QuickSettingsTileView extends FrameLayout {
+public class QuickSettingsTileView extends RelativeLayout {
 
     private int mColSpan;
     private int mRowSpan;
-    private int mCellWidth;
 
     public QuickSettingsTileView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -41,11 +44,11 @@ class QuickSettingsTileView extends FrameLayout {
         mColSpan = span;
     }
 
-    int getColumnSpan() {
+    public int getColumnSpan() {
         return mColSpan;
     }
 
-    void setContent(int layoutId, LayoutInflater inflater) {
+    public void setContent(int layoutId, LayoutInflater inflater) {
         inflater.inflate(layoutId, this);
     }
 }

@@ -219,6 +219,15 @@ public class PackageInfo implements Parcelable {
      */
     public int installLocation = INSTALL_LOCATION_INTERNAL_ONLY;
 
+    /** @hide */
+    public boolean requiredForAllUsers;
+
+    /** @hide */
+    public String restrictedAccountType;
+
+    /** @hide */
+    public String requiredAccountType;
+    
     // Is Theme Apk
     /**
      * {@hide}
@@ -230,15 +239,6 @@ public class PackageInfo implements Parcelable {
      * {@hide}
      */
     public ThemeInfo [] themeInfos;
-
-    /** @hide */
-    public boolean requiredForAllUsers;
-
-    /** @hide */
-    public String restrictedAccountType;
-
-    /** @hide */
-    public String requiredAccountType;
 
     public PackageInfo() {
     }
